@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from abaqusGui import *
 from abaqusConstants import ALL
 import osutils, os
@@ -17,7 +16,7 @@ class STPM_test1033_plugin(AFXForm):
         #
         AFXForm.__init__(self, owner)
         self.radioButtonGroups = {}
-
+        
         self.cmd = AFXGuiCommand(mode=self, method='fun1',
             objectName='ECUST', registerQuery=False)
         pickedDefault = ''
@@ -139,8 +138,6 @@ class STPM_test1033_plugin(AFXForm):
         self.keyword08Kw = AFXIntKeyword(self.cmd, 'keyword08', True, 3)
         self.keyword07Kw = AFXIntKeyword(self.cmd, 'keyword07', True, 3)
         self.keyword30Kw = AFXFloatKeyword(self.cmd, 'keyword30', True)
-        #self.materialNameKw = AFXStringKeyword(self.cmd, 'materialName', True)#材料界面当前模型的材料
-
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def getFirstDialog(self):
