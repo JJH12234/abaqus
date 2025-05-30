@@ -6,10 +6,15 @@ import os
 import json
 import xlrd
 from collections import OrderedDict, Counter, defaultdict
+import re
 
 thisPath = os.path.abspath(__file__)
 thisDir = os.path.dirname(thisPath)
 
+
+# 定义工作路径变量（可以手动修改）
+WORK_DIR = r"E:\桌面\project\Abaqus".decode('utf-8')  # 使用 decode 处理中文路径
+os.chdir(WORK_DIR)  # 设置工作目录
 
 ###########################################################################
 # Class definition
@@ -716,9 +721,18 @@ class STPM_test1033DB(AFXDataDialog):
 
     # 主界面DB初始化结束，开始定义函数
     def get_current_model(self):
-        viewport = session.currentViewportName
-        modelname = session.sessionState[viewport]['modelName']
-        return mdb.models[modelname]
+        """获取当前模型并更新界面显示
+        
+        Returns:
+            Model: 当前模型对象，如果没有则返回 None
+        """
+        currentModelName = getCurrentContext().get('modelName', '')
+        if currentModelName in mdb.models:
+            model = mdb.models[currentModelName]
+            # 更新ModelName显示
+            self.form.keyword99Kw.setValue(currentModelName)
+            return model
+        return None
     def model_meterial_changed(self,form,sel, ptr):
         selected_material = self.ComboBox_15.getItemText(self.ComboBox_15.getCurrentItem())
         # 根据选择显示/隐藏输入框
@@ -906,8 +920,18 @@ class STPM_test1033DB(AFXDataDialog):
         try:
             mw = getAFXApp().getAFXMainWindow()
             
-            # 获取材料名称
+            # 获取材料名称并验证
             aimMaterialName = self.newMaterialText.getText()
+            if not aimMaterialName or not aimMaterialName.strip():
+                mw.writeToMessageArea(u"错误: 材料名称不能为空".encode('utf-8'))
+                return
+                
+            # 验证材料名称是否合法（只允许字母、数字、下划线和中文）
+            import re
+            if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', aimMaterialName):
+                mw.writeToMessageArea(u"错误: 材料名称只能包含字母、数字、下划线和中文字符".encode('utf-8'))
+                return
+            
             mw.writeToMessageArea("Material name type: " + str(type(aimMaterialName)))
             mw.writeToMessageArea("Material name value: " + str(aimMaterialName))
             
@@ -933,13 +957,15 @@ class STPM_test1033DB(AFXDataDialog):
                 return
                 
             # 调用pre_materialImport导入材料
-            fortran_data = self.pre_materialImport(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum))
-            
-            # 导入成功后显示消息
-            mw.writeToMessageArea("Material '{}' imported successfully".format(aimMaterialName))
-            
-            # 更新材料下拉框
-            self.updateComboBox_15Materials()
+            try:
+                fortran_data = self.pre_materialImport(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum))
+                # 导入成功后显示消息
+                mw.writeToMessageArea(u"材料 '{}' 导入成功".format(aimMaterialName).encode('utf-8'))
+                # 更新材料下拉框
+                self.updateComboBox_15Materials()
+            except Exception as e:
+                mw.writeToMessageArea(u"错误: 材料导入失败 - ".encode('utf-8') + str(e))
+                return
             
         except Exception as e:
             # 导入失败时显示错误信息
@@ -1011,27 +1037,37 @@ class STPM_test1033DB(AFXDataDialog):
     ###########################################################################
     
     
-    def show(self):#覆写父类功能
-
+    def show(self):
+        """显示对话框时被调用"""
         AFXDataDialog.show(self)
 
-        # Register a query on materials
-        #
-        session.registerQuery(self.onSessionChange, False)#注册函数到session变化时
+        # 注册会话变化监听
+        session.registerQuery(self.onSessionChange, False)
+        
+        # 获取并设置当前模型名称
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
-            self.regModel=mdb.models[currentModelName]
-            self.regModel.materials.registerQuery(self.updateComboBox_15Materials,False)#启动时，先注册当前模型.材料
-        self.updateComboBox_15Materials()#执行一次更新
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            self.regModel = mdb.models[currentModelName]
+            # 注册材料变化监听
+            self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
+            # 设置当前模型名称
+            self.form.keyword99Kw.setValue(currentModelName)
+        
+        # 更新材料下拉框
+        self.updateComboBox_15Materials()
+
     def hide(self):
+        """隐藏对话框时被调用"""
         AFXDataDialog.hide(self)
-        session.unregisterQuery(self.onSessionChange)#注销是必要的，不然在被监听对象不存在时必定报错
+        # 注销会话变化监听
+        session.unregisterQuery(self.onSessionChange)
+        # 注销材料变化监听
         try:
-            self.regModel.materials.unregisterQuery(self.updateComboBox_15Materials)#注销当前模型.材料
+            if self.regModel:
+                self.regModel.materials.unregisterQuery(self.updateComboBox_15Materials)
         except:
             pass
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def updateComboBox_15Materials(self):
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
@@ -1052,7 +1088,9 @@ class STPM_test1033DB(AFXDataDialog):
             return 1
         else:
             return 0
+
     def onSessionChange(self):
+        """当会话改变时（包括模型切换）被调用"""
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
             if self.regModel and getattr(self.regModel,'name',None) != currentModelName: #当模型切换过
@@ -1062,23 +1100,55 @@ class STPM_test1033DB(AFXDataDialog):
                 except:
                     pass
             #注册新模型材料
-            self.regModel=mdb.models[currentModelName]
-            self.regModel.materials.registerQuery(self.updateComboBox_15Materials,False)
-            self.updateComboBox_15Materials()#调用一次
+            self.regModel = mdb.models[currentModelName]
+            self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
+            
+            # 更新ModelName显示
+            self.form.keyword99Kw.setValue(currentModelName)
+            
+            # 更新材料下拉框
+            self.updateComboBox_15Materials()
             return 1
         else:
             return 0
 
-
     def pre_materialImport(self, jsondata, aimMaterialName, UVARMnum, SDVnum):
-        # jsondata应该是多级字典结构
+        """导入材料数据到当前模型
+        
+        Args:
+            jsondata (dict): 材料属性数据字典
+            aimMaterialName (str): 目标材料名称
+            UVARMnum (int): UVARM变量数量
+            SDVnum (int): SDV变量数量
+            
+        Returns:
+            dict: Fortran相关数据
+        """
+        # 验证参数
+        if not isinstance(jsondata, dict):
+            raise ValueError(u"JSON数据必须是字典格式".encode('utf-8'))
+        
+        if not isinstance(aimMaterialName, str):
+            raise ValueError(u"材料名称必须是字符串类型".encode('utf-8'))
+            
+        if not aimMaterialName.strip():
+            raise ValueError(u"材料名称不能为空".encode('utf-8'))
+            
+        # 获取当前模型
         m = self.get_current_model()
-        if aimMaterialName in m.materials:
-            pass
-        else:
-            m.Material(name=aimMaterialName)  # 新建
-        mm = m.materials[aimMaterialName]
-        # filtered_data = {k: v for k, v in jsondata.items() if not k.startswith("user_")} #排除子程序用参数
+        if not m:
+            raise RuntimeError(u"无法获取当前模型".encode('utf-8'))
+            
+        # 创建或获取材料
+        try:
+            if aimMaterialName in m.materials:
+                mm = m.materials[aimMaterialName]
+            else:
+                mm = m.Material(name=aimMaterialName)
+        except Exception as e:
+            raise RuntimeError(u"创建材料失败: ".encode('utf-8') + str(e))
+            
+        # 分离用户自定义数据和标准材料数据
         filtered_data = {}
         fortran_data = {}
         for k, v in jsondata.items():
@@ -1086,23 +1156,38 @@ class STPM_test1033DB(AFXDataDialog):
                 fortran_data[k] = v
             else:
                 filtered_data[k] = v
-        data = self.process_dict(filtered_data)  # 处理为列表
-        for properrow in data:
-            self.addproperty(mm, properrow)
-        if UVARMnum > 0:
-            mm.UserOutputVariables(n=UVARMnum)
-        else:
-            if getattr(mm, 'userOutputVariables', None):
-                del mm.userOutputVariables
-        if SDVnum > 0:
-            mm.UserDefinedField()
-            mm.Depvar(n=SDVnum)
-        else:
-            if getattr(mm, 'depvar', None):
-                del mm.depvar
-            if getattr(mm, 'userDefinedField', None):
-                del mm.userDefinedField
-        # print(process_dict(fortran_data))
+                
+        # 处理标准材料数据
+        try:
+            data = self.process_dict(filtered_data)
+            for properrow in data:
+                self.addproperty(mm, properrow)
+        except Exception as e:
+            raise RuntimeError(u"处理材料属性失败: ".encode('utf-8') + str(e))
+            
+        # 处理UVARM
+        try:
+            if UVARMnum > 0:
+                mm.UserOutputVariables(n=UVARMnum)
+            else:
+                if hasattr(mm, 'userOutputVariables'):
+                    del mm.userOutputVariables
+        except Exception as e:
+            raise RuntimeError(u"设置UVARM失败: ".encode('utf-8') + str(e))
+            
+        # 处理SDV
+        try:
+            if SDVnum > 0:
+                mm.UserDefinedField()
+                mm.Depvar(n=SDVnum)
+            else:
+                if hasattr(mm, 'depvar'):
+                    del mm.depvar
+                if hasattr(mm, 'userDefinedField'):
+                    del mm.userDefinedField
+        except Exception as e:
+            raise RuntimeError(u"设置SDV失败: ".encode('utf-8') + str(e))
+            
         return fortran_data
 
     def process_dict(self, d, path=None):
@@ -1521,6 +1606,8 @@ class STPM_test1033DBFileHandler(FXObject):
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def activate(self, sender, sel, ptr):
+        if not self.fileNameKw.getValue():
+            self.fileNameKw.setValue(WORK_DIR)
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
             self.fileNameKw, self.readOnlyKw,
             AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
@@ -1549,10 +1636,8 @@ class TesttreeDBFileHandler(FXObject):
         FXMAPFUNC(self, SEL_COMMAND, db.ID_FILE_NAME_CHANGED, TesttreeDBFileHandler.onFileNameChanged)
 
     def activate(self, sender, sel, ptr):
-        # 设置默认路径
         if not self.JSONNameKw.getValue():
-            default_path = r"D:\桌面"
-            self.JSONNameKw.setValue(default_path)
+            self.JSONNameKw.setValue(os.path.join(WORK_DIR, 'MaterialData.json'))
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
                                        self.JSONNameKw, self.readOnlyKw,
                                        AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
@@ -1593,10 +1678,8 @@ class XslFileHandler(FXObject):
         self.db.fileNameKw = self.fileNameKw
 
     def activate(self, sender, sel, ptr):
-        # 设置默认路径
         if not self.fileNameKw.getValue():
-            default_path = r"D:\桌面"
-            self.fileNameKw.setValue(default_path)
+            self.fileNameKw.setValue(os.path.join(WORK_DIR, 'ParaModelingData.xls'))
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
                                        self.fileNameKw, self.readOnlyKw,
                                        AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
@@ -1673,10 +1756,8 @@ class InputFileHandler(FXObject):
         FXMAPFUNC(self, SEL_COMMAND, db.ID_FILE_NAME_CHANGED, InputFileHandler.onFileNameChanged)
 
     def activate(self, sender, sel, ptr):
-        # 设置默认路径
         if not self.InputDataName.getValue():
-            default_path = r"D:\桌面"
-            self.InputDataName.setValue(default_path)
+            self.InputDataName.setValue(WORK_DIR)
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
                                        self.InputDataName, self.readOnlyKw,
                                        AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
