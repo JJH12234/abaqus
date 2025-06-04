@@ -514,11 +514,21 @@ class STPM_test1033DB(AFXDataDialog):
 
         try:
             self.STRESSList = []
-            # mw = getAFXApp().getAFXMainWindow()
-            # mw.writeToMessageArea(str(m.loads.keys()))
-            for i in m.loads.keys():
-                self.STRESSList.append(i)
-            self.STRESSList = ['none1', 'none2']  # test
+            mw = getAFXApp().getAFXMainWindow()
+            mw.writeToMessageArea("Debug: Attempting to populate STRESSList for model: " + str(m.name))
+            
+            model_loads = m.loads 
+            if not model_loads:
+                mw.writeToMessageArea("Debug: m.loads is None or empty.")
+                # self.STRESSList will remain empty
+            else:
+                model_loads_keys = model_loads.keys()
+                mw.writeToMessageArea("Debug: m.loads.keys() content: " + str(model_loads_keys))
+                if not model_loads_keys:
+                    mw.writeToMessageArea("Debug: m.loads.keys() is empty.")
+                for i in model_loads_keys:
+                    self.STRESSList.append(i)
+            mw.writeToMessageArea("Debug: self.STRESSList after try block: " + str(self.STRESSList))
 
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
@@ -1473,7 +1483,10 @@ class STPM_test1033DB(AFXDataDialog):
                     self.form.keyword65Kw.setValue(str(item_text))
                 else:
                     self.form.keyword65Kw.setValue(self.form.keyword65Kw.getValue()+','+str(item_text))
-    
+
+                # 显式调用 onCycleListChanged 来更新 keyword80Kw
+                self.onCycleListChanged(self.form.keyword65Kw, 0, None)
+                
                 # 如果需要，可以在消息区域显示选中的内容
                 mw = getAFXApp().getAFXMainWindow()
                 mw.writeToMessageArea("Selected item: " + str(item_text))
