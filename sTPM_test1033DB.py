@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: GB18030 -*-
 from abaqusConstants import *
 from abaqusGui import *
 from kernelAccess import mdb, session
@@ -6,15 +6,12 @@ import os
 import json
 import xlrd
 from collections import OrderedDict, Counter, defaultdict
+PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
+# os.chdir(PLUGIN_DIR)
 import re
-
 thisPath = os.path.abspath(__file__)
 thisDir = os.path.dirname(thisPath)
 
-
-# å®šä¹‰å·¥ä½œè·¯å¾„å˜é‡ï¼ˆå¯ä»¥æ‰‹åŠ¨ä¿®æ”¹ï¼‰
-WORK_DIR = r"E:\æ¡Œé¢\project\Abaqus".decode('utf-8')  # ä½¿ç”¨ decode å¤„ç†ä¸­æ–‡è·¯å¾„
-os.chdir(WORK_DIR)  # è®¾ç½®å·¥ä½œç›®å½•
 
 ###########################################################################
 # Class definition
@@ -45,7 +42,7 @@ class STPM_test1033DB(AFXDataDialog):
                                # self.OK | self.CANCEL, )
         self.materials_data = {}
         self.form = form
-        self.temp_json = {}  # æ·»åŠ ä¸´æ—¶JSONå­˜å‚¨
+        self.temp_json = {}  # Ìí¼ÓÁÙÊ±JSON´æ´¢
         # okBtn = self.getActionButton(self.ID_CLICKED_OK)
         # okBtn.setText('OK')
 
@@ -55,7 +52,7 @@ class STPM_test1033DB(AFXDataDialog):
                               pt=DEFAULT_SPACING, pb=DEFAULT_SPACING)
 
         # try:
-        #     excel_path = u"D:/æ¡Œé¢/å·¥ç¨‹å¼€å‘é¡¹ç›®/ParaModelingData.xls"
+        #     excel_path = u"D:/×ÀÃæ/¹¤³Ì¿ª·¢ÏîÄ¿/ParaModelingData.xls"
         #     workbook = xlrd.open_workbook(excel_path)
         #     sheet = workbook.sheet_by_index(0)
         #
@@ -149,7 +146,7 @@ class STPM_test1033DB(AFXDataDialog):
             opts=FRAME_RAISED|FRAME_THICK|LAYOUT_FILL_X,
             x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
             pt=DEFAULT_SPACING, pb=DEFAULT_SPACING, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
-        fileHandler = TesttreeDBFileHandler(form, self,'JSONName', 'All files (*)')
+        fileHandler = TesttreeDBFileHandler(form, self,'JSONName', 'Json files (*.json)')
         fileTextHf = FXHorizontalFrame(p=TabItem_16, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
         # Note: Set the selector to indicate that this widget should not be
@@ -187,7 +184,7 @@ class STPM_test1033DB(AFXDataDialog):
                                x=0, y=0, w=200, h=0)
         self.updateTree(selected_material)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_COMBO_CHANGED_TREE, STPM_test1033DB.onMaterialChanged)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED, STPM_test1033DB.onTreeCheckChanged)  # æ–°å¢äº‹ä»¶ç»‘å®š
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED, STPM_test1033DB.onTreeCheckChanged)  # ĞÂÔöÊÂ¼ş°ó¶¨
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED, STPM_test1033DB.get_checked_data)
         # List_1 = AFXList(p=listVf, nvis=20, tgt=form.keyword47Kw, sel=0, opts=HSCROLLING_OFF|LIST_SINGLESELECT)
         # List_1.appendItem(text='  -Prime property1')
@@ -224,7 +221,8 @@ class STPM_test1033DB(AFXDataDialog):
             pl=0, pr=0, pt=0, pb=0)
         m = self.get_current_model()
         form.keyword99Kw.setValue(m.name)
-        AFXTextField(p=HFrame_38, ncols=12, labelText="ModelName:", tgt=form.keyword99Kw, sel=0)
+        ModelNameTxt=AFXTextField(p=HFrame_38, ncols=12, labelText="ModelName:", tgt=form.keyword99Kw, sel=0)
+        ModelNameTxt.hide()
         self.ComboBox_15 = AFXComboBox(p=HFrame_38, ncols=0, nvis=1, text='Material :', tgt=form.keyword98Kw, sel=self.ID_MODEL_MATERIAL_COMBO_CHANGED)
         self.ComboBox_15.setTarget(self)
         self.ComboBox_15.setSelector(self.ID_MODEL_MATERIAL_COMBO_CHANGED)
@@ -235,7 +233,8 @@ class STPM_test1033DB(AFXDataDialog):
         self.ComboBox_15.appendItem(text='New')
         self.newMaterialText = AFXTextField(p=HFrame_38, ncols=12, labelText='New:', 
             tgt=form.keyword100Kw, sel=0, opts=0)
-        self.newMaterialText.hide()
+        if self.ComboBox_15.getItemText(self.ComboBox_15.getCurrentItem())!='New': #2025Äê6ÔÂ4ÈÕ lgp
+            self.newMaterialText.hide()
         # AFXTextField(p=HFrame_38, ncols=12, labelText='New:', tgt=form.keyword100Kw, sel=0)
         HFrame_31 = FXHorizontalFrame(p=VFrame_16, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0)
@@ -251,7 +250,7 @@ class STPM_test1033DB(AFXDataDialog):
                                      sel=self.ID_CLICKED_import1,
                                      opts=BUTTON_NORMAL |LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         #l = FXLabel(p=VFrame_16, text='Button: Run', opts=JUSTIFY_LEFT)
-        # ä¸ºimport1æŒ‰é’®æ·»åŠ äº‹ä»¶å¤„ç†
+        # Îªimport1°´Å¥Ìí¼ÓÊÂ¼ş´¦Àí
         import1.setTarget(self)
         import1.setSelector(self.ID_CLICKED_import1)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_import1, STPM_test1033DB.onImport1Clicked)
@@ -370,6 +369,10 @@ class STPM_test1033DB(AFXDataDialog):
                                       pl=0, pr=0, pt=0, pb=0)
         listVf = FXVerticalFrame(p=HFrame_32, opts=FRAME_SUNKEN | FRAME_THICK, x=0, y=0, w=0, h=0,
                                  pl=0, pr=0, pt=0, pb=0)
+        TabBook_1.setTarget(self)                 # ¼àÌı¶¥²ã±êÇ©ÇĞ»»
+        TabBook_1.setSelector(self.ID_TAB_CHANGED)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_TAB_CHANGED,
+                STPM_test1033DB.onMainTabChanged)
         # Note: Set the selector to indicate that this widget should not be
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
@@ -583,6 +586,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.table1.showVerticalGrid(True)
         tabItem = FXTabItem(p=TabBook_1, text='Fortran Subroutine', ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
+        tabItem.hide()
         TabItem_9 = FXVerticalFrame(p=TabBook_1,
                                     opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
                                     x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
@@ -714,35 +718,35 @@ class STPM_test1033DB(AFXDataDialog):
         spinner.setIncrement(1)
         AFXTextField(p=HFrame_12, ncols=12, labelText='DownStepLength:', tgt=form.keyword30Kw, sel=0)
 
-        # åœ¨TabBook_5åˆ›å»ºåæ·»åŠ äº‹ä»¶ç›‘å¬
+        # ÔÚTabBook_5´´½¨ºóÌí¼ÓÊÂ¼ş¼àÌı
         TabBook_5.setTarget(self)
         TabBook_5.setSelector(self.ID_TAB_CHANGED)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TAB_CHANGED, STPM_test1033DB.onTabChanged)
 
-    # ä¸»ç•Œé¢DBåˆå§‹åŒ–ç»“æŸï¼Œå¼€å§‹å®šä¹‰å‡½æ•°
+    # Ö÷½çÃæDB³õÊ¼»¯½áÊø£¬¿ªÊ¼¶¨Òåº¯Êı
     def get_current_model(self):
-        """è·å–å½“å‰æ¨¡å‹å¹¶æ›´æ–°ç•Œé¢æ˜¾ç¤º
+        """»ñÈ¡µ±Ç°Ä£ĞÍ²¢¸üĞÂ½çÃæÏÔÊ¾
         
         Returns:
-            Model: å½“å‰æ¨¡å‹å¯¹è±¡ï¼Œå¦‚æœæ²¡æœ‰åˆ™è¿”å› None
+            Model: µ±Ç°Ä£ĞÍ¶ÔÏó£¬Èç¹ûÃ»ÓĞÔò·µ»Ø None
         """
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
             model = mdb.models[currentModelName]
-            # æ›´æ–°ModelNameæ˜¾ç¤º
+            # ¸üĞÂModelNameÏÔÊ¾
             self.form.keyword99Kw.setValue(currentModelName)
             return model
         return None
     def model_meterial_changed(self,form,sel, ptr):
         selected_material = self.ComboBox_15.getItemText(self.ComboBox_15.getCurrentItem())
-        # æ ¹æ®é€‰æ‹©æ˜¾ç¤º/éšè—è¾“å…¥æ¡†
+        # ¸ù¾İÑ¡ÔñÏÔÊ¾/Òş²ØÊäÈë¿ò
         if selected_material == "New":
             self.newMaterialText.show()
-            self.newMaterialText.getParent().recalc()  # æ·»åŠ çˆ¶å®¹å™¨é‡æ–°å¸ƒå±€
+            self.newMaterialText.getParent().recalc()  # Ìí¼Ó¸¸ÈİÆ÷ÖØĞÂ²¼¾Ö
         else:
             self.newMaterialText.hide()
-            self.newMaterialText.getParent().recalc()  # æ·»åŠ çˆ¶å®¹å™¨é‡æ–°å¸ƒå±€
-    #1034ç‰ˆæœ¬ä»£ç 
+            self.newMaterialText.getParent().recalc()  # Ìí¼Ó¸¸ÈİÆ÷ÖØĞÂ²¼¾Ö
+    #1034°æ±¾´úÂë
     # def model_meterial_changed(self, form, sel, ptr):
     #     selected_material = self.ComboBox_15.getItemText(self.ComboBox_15.getCurrentItem())
     #     if selected_material == "New":
@@ -782,10 +786,10 @@ class STPM_test1033DB(AFXDataDialog):
         self.tree.update()
 
             
-    # æ–°å¢å¤é€‰æ¡†çŠ¶æ€å˜åŒ–å¤„ç†å‡½æ•°
+    # ĞÂÔö¸´Ñ¡¿ò×´Ì¬±ä»¯´¦Àíº¯Êı
     def onTreeCheckChanged(self, sender, sel, ptr):
         item = self.tree.getCurrentItem()
-        # æ·»åŠ æ˜¾å¼çŠ¶æ€å˜é‡å’Œå‚æ•°æ ¡éªŒ
+        # Ìí¼ÓÏÔÊ½×´Ì¬±äÁ¿ºÍ²ÎÊıĞ£Ñé
         if item and self.tree.getItemCheck(item) == 1:  
             selected_material = self.ComboBox_12.getItemText(self.ComboBox_12.getCurrentItem())
             # mw = getAFXApp().getAFXMainWindow()
@@ -793,34 +797,34 @@ class STPM_test1033DB(AFXDataDialog):
             # mw.writeToMessageArea(self.tree.getItemText(item))
 
             if str(self.tree.getItemText(item)) == selected_material:
-                # å¦‚æœæ˜¯æ ¹èŠ‚ç‚¹è¢«é€‰ä¸­
+                # Èç¹ûÊÇ¸ù½Úµã±»Ñ¡ÖĞ
                 def select_first_leaf(node):
-                    # å¦‚æœæ˜¯å¶å­èŠ‚ç‚¹ï¼Œè¿”å›True
+                    # Èç¹ûÊÇÒ¶×Ó½Úµã£¬·µ»ØTrue
                     if not node.getFirst():
                         return True
                     
-                    # è·å–ç¬¬ä¸€ä¸ªå­èŠ‚ç‚¹
+                    # »ñÈ¡µÚÒ»¸ö×Ó½Úµã
                     child = node.getFirst()
                     first_leaf_found = False
                     
                     while child:
-                        # å¦‚æœå½“å‰å­èŠ‚ç‚¹æ˜¯å¶å­èŠ‚ç‚¹
+                        # Èç¹ûµ±Ç°×Ó½ÚµãÊÇÒ¶×Ó½Úµã
                         if select_first_leaf(child):
                             if not first_leaf_found:
-                                # é€‰ä¸­ç¬¬ä¸€ä¸ªå¶å­èŠ‚ç‚¹
+                                # Ñ¡ÖĞµÚÒ»¸öÒ¶×Ó½Úµã
                                 self.tree.setItemCheck(child, True, notify=False)
                                 first_leaf_found = True
                             else:
-                                # å–æ¶ˆé€‰ä¸­å…¶ä»–å¶å­èŠ‚ç‚¹
+                                # È¡ÏûÑ¡ÖĞÆäËûÒ¶×Ó½Úµã
                                 self.tree.setItemCheck(child, False, notify=False)
                         child = child.getNext()
                     
                     return False
 
-                # ä»æ ¹èŠ‚ç‚¹å¼€å§‹é€’å½’å¤„ç†
+                # ´Ó¸ù½Úµã¿ªÊ¼µİ¹é´¦Àí
                 select_first_leaf(item)
                 
-                # æ›´æ–°æ ‘çš„æ˜¾ç¤º
+                # ¸üĞÂÊ÷µÄÏÔÊ¾
                 self.tree.update()
             else:
                 if self.tree.isItemLeaf(item):
@@ -846,134 +850,194 @@ class STPM_test1033DB(AFXDataDialog):
                     self.tree.update()
                     
     def get_checked_data(self):
-        """è·å–æ‰€æœ‰è¢«å‹¾é€‰çš„å¶å­èŠ‚ç‚¹æ•°æ®"""
+        """»ñÈ¡ËùÓĞ±»¹´Ñ¡µÄÒ¶×Ó½ÚµãÊı¾İ"""
         jsondata = {}
         full_data = self.materials_data
         mw = getAFXApp().getAFXMainWindow()
         
-        def traverse_tree(node, current_dict, full_data):
-            """é€’å½’éå†æ ‘èŠ‚ç‚¹"""
-            if not node:
-                return
-                
-            # è·³è¿‡æ ¹èŠ‚ç‚¹çš„å¤„ç†
-            if not node.getParent():  # å¦‚æœæ˜¯æ ¹èŠ‚ç‚¹
-                # ç›´æ¥å¤„ç†å…¶å­èŠ‚ç‚¹
-                child = node.getFirst()
-                while child:
-                    traverse_tree(child, current_dict, full_data[self.tree.getItemText(node)])
-                    child = child.getNext()
-                return
-                
-            # è·å–èŠ‚ç‚¹æ–‡æœ¬å’Œæ£€æŸ¥çŠ¶æ€
-            node_text = self.tree.getItemText(node)
-            is_checked = self.tree.getItemCheck(node)
-            
-            # å¦‚æœèŠ‚ç‚¹æœªè¢«å‹¾é€‰ï¼Œç›´æ¥è¿”å›
-            if not is_checked:
-                return
-                
-            # å¦‚æœæ˜¯å¶å­èŠ‚ç‚¹
-            if not node.getFirst():
-                # æ„å»ºè·¯å¾„
+        # µİ¹é»ñÈ¡ËùÓĞ±»¹´Ñ¡µÄ½Úµã
+        def collect_checked_nodes(node, path=None):
+            if path is None:
                 path = []
-                temp_node = node
-                while temp_node and temp_node.getParent():  # ä¸åŒ…å«æ ¹èŠ‚ç‚¹
-                    path.insert(0, self.tree.getItemText(temp_node))
-                    temp_node = temp_node.getParent()
+            
+            if not node:
+                return []
                 
-                # ä»å®Œæ•´æ•°æ®ä¸­è·å–æ•°æ®
-                temp_data = full_data
-                for key in path[:-1]:  # ä¸åŒ…å«æœ€åä¸€ä¸ªèŠ‚ç‚¹åç§°
+            result = []
+            node_text = self.tree.getItemText(node)
+            is_checked = self.tree.getItemCheck(node) == 1
+            current_path = path + [node_text]
+            
+            # Èç¹ûÊÇÒ¶×Ó½ÚµãÇÒ±»¹´Ñ¡
+            if not node.getFirst() and is_checked:
+                result.append(current_path)
+            
+            # ´¦Àí×Ó½Úµã
+            child = node.getFirst()
+            while child:
+                result.extend(collect_checked_nodes(child, current_path))
+                child = child.getNext()
+                
+            return result
+        
+        # ¹¹½¨½á¹ûÊı¾İ
+        def build_data_from_paths(paths):
+            result = {}
+            
+            for path in paths:
+                # Ìø¹ı¸ù½Úµã
+                if len(path) <= 1:
+                    continue
+                    
+                # ÌáÈ¡³ı¸ù½ÚµãÍâµÄÂ·¾¶
+                node_path = path[1:]
+                
+                # »ñÈ¡Êı¾İÔ´
+                material_name = path[0]
+                if material_name not in self.materials_data:
+                    continue
+                    
+                data_source = self.materials_data[material_name]
+                
+                # ±éÀúÂ·¾¶»ñÈ¡Êı¾İ
+                temp_data = data_source
+                for i, key in enumerate(node_path[:-1]):
+                    if key not in temp_data:
+                        break
                     temp_data = temp_data[key]
                 
-                # æ„å»ºæ•°æ®ç»“æ„
-                temp_dict = current_dict
-                for i, key in enumerate(path[:-1]):
+                # ¼ì²é×îºóÒ»¸ö¼üÊÇ·ñ´æÔÚ
+                last_key = node_path[-1]
+                if last_key not in temp_data:
+                    continue
+                
+                # ¹¹½¨½á¹ûÊı¾İ½á¹¹
+                temp_dict = result
+                for i, key in enumerate(node_path[:-1]):
                     if key not in temp_dict:
                         temp_dict[key] = {}
                     temp_dict = temp_dict[key]
                 
-                # æ·»åŠ å¶å­èŠ‚ç‚¹æ•°æ®
-                temp_dict[path[-1]] = temp_data[path[-1]]
-                
-            else:
-                # å¦‚æœä¸æ˜¯å¶å­èŠ‚ç‚¹ï¼Œç»§ç»­éå†å­èŠ‚ç‚¹
-                if node_text not in current_dict:
-                    current_dict[node_text] = {}
-                child = node.getFirst()
-                while child:
-                    traverse_tree(child, current_dict[node_text], full_data)
-                    child = child.getNext()
+                # Ìí¼ÓÒ¶×Ó½ÚµãÊı¾İ
+                temp_dict[last_key] = temp_data[last_key]
+            
+            return result
         
-        # è·å–æ ¹èŠ‚ç‚¹
+        # »ñÈ¡¸ù½Úµã
         root = self.tree.getFirstItem()
         if not root:
             return jsondata
-            
-        # å¼€å§‹éå†ï¼Œä»æ ¹èŠ‚ç‚¹çš„å­èŠ‚ç‚¹å¼€å§‹
-        traverse_tree(root, jsondata, full_data)
+        
+        # ÊÕ¼¯ËùÓĞ¹´Ñ¡µÄÂ·¾¶
+        checked_paths = collect_checked_nodes(root)
+        mw.writeToMessageArea("Checked paths: " + str(checked_paths))
+        
+        # ´ÓÂ·¾¶¹¹½¨Êı¾İ
+        jsondata = build_data_from_paths(checked_paths)
+        
+        # Ìí¼Óµ÷ÊÔÊä³ö
+        try:
+            # ½«×Öµä×ª»»Îª×Ö·û´®²¢°²È«Êä³ö
+            json_str = str(jsondata)
+            mw.writeToMessageArea("Selected data: " + json_str)
+        except Exception as e:
+            mw.writeToMessageArea("Error displaying data: " + str(e))
         
         return jsondata
+
     def onImport1Clicked(self, sender, sel, ptr):
-        """å¤„ç†import1æŒ‰é’®ç‚¹å‡»äº‹ä»¶"""
+        """´¦Àíimport1°´Å¥µã»÷ÊÂ¼ş"""
         try:
             mw = getAFXApp().getAFXMainWindow()
             
-            # è·å–ææ–™åç§°å¹¶éªŒè¯
+            # »ñÈ¡²ÄÁÏÃû³Æ²¢ÑéÖ¤
             aimMaterialName = self.newMaterialText.getText()
             if not aimMaterialName or not aimMaterialName.strip():
-                mw.writeToMessageArea(u"é”™è¯¯: ææ–™åç§°ä¸èƒ½ä¸ºç©º".encode('utf-8'))
+                mw.writeToMessageArea("Error: Material name cannot be empty")
                 return
                 
-            # éªŒè¯ææ–™åç§°æ˜¯å¦åˆæ³•ï¼ˆåªå…è®¸å­—æ¯ã€æ•°å­—ã€ä¸‹åˆ’çº¿å’Œä¸­æ–‡ï¼‰
+            # ÑéÖ¤²ÄÁÏÃû³ÆÊÇ·ñºÏ·¨£¨Ö»ÔÊĞí×ÖÄ¸¡¢Êı×Ö¡¢ÏÂ»®ÏßºÍÖĞÎÄ£©
             import re
             if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', aimMaterialName):
-                mw.writeToMessageArea(u"é”™è¯¯: ææ–™åç§°åªèƒ½åŒ…å«å­—æ¯ã€æ•°å­—ã€ä¸‹åˆ’çº¿å’Œä¸­æ–‡å­—ç¬¦".encode('utf-8'))
+                mw.writeToMessageArea("Error: Material name can only contain letters, numbers, underscores and Chinese characters")
                 return
             
-            mw.writeToMessageArea("Material name type: " + str(type(aimMaterialName)))
-            mw.writeToMessageArea("Material name value: " + str(aimMaterialName))
-            
-            # è·å–UVARMå’ŒSDVæ•°é‡
+            mw.writeToMessageArea("Material name: " + str(aimMaterialName))
+            cur_item = self.ComboBox_15.getCurrentItem()
+            combo_value = self.ComboBox_15.getItemText(cur_item)
+            if combo_value == "New":
+            # Ñ¡ÔñÁË¡°New¡±²ÅÓÃÎÄ±¾¿ò
+                aimMaterialName = self.newMaterialText.getText().strip()
+                if not aimMaterialName:
+                    showAFXErrorDialog(mw, "Please input a new material name.")
+                    return
+            else:
+                # ·ñÔòÓÃÏÂÀ­¿òµÄÒÑÓĞ²ÄÁÏÃû
+                aimMaterialName = combo_value
+            # »ñÈ¡UVARMºÍSDVÊıÁ¿
             UVARMnum = self.form.keyword61Kw.getValue() 
             SDVnum = self.form.keyword62Kw.getValue()
-            mw.writeToMessageArea("UVARM type: " + str(type(UVARMnum)))
-            mw.writeToMessageArea("SDV type: " + str(type(SDVnum)))
+            mw.writeToMessageArea("UVARM count: " + str(UVARMnum) + ", SDV count: " + str(SDVnum))
             
-            # è·å–é€‰ä¸­çš„ææ–™æ•°æ®
+            # »ñÈ¡Ñ¡ÖĞµÄ²ÄÁÏÊı¾İ
+            mw.writeToMessageArea("Getting selected material data...")
             jsondata = self.get_checked_data()
-            mw.writeToMessageArea("JSON data type: " + str(type(jsondata)))
-            mw.writeToMessageArea("JSON data content: " + str(jsondata))  # æ·»åŠ è¿™è¡Œæ¥æŸ¥çœ‹å…·ä½“å†…å®¹
             
-            # æ£€æŸ¥jsondataçš„å†…å®¹
+            # ¼ì²éjsondataµÄÄÚÈİ
             if not isinstance(jsondata, dict):
                 mw.writeToMessageArea("Error: JSON data must be a dictionary")
                 return
                 
-            # æ£€æŸ¥æ˜¯å¦æœ‰é€‰ä¸­çš„æ•°æ®
+            # ¼ì²éÊÇ·ñÓĞÑ¡ÖĞµÄÊı¾İ
             if not jsondata:
                 mw.writeToMessageArea("Error: No material data selected")
                 return
-                
-            # è°ƒç”¨pre_materialImportå¯¼å…¥ææ–™
+            
+            # Êä³öÑ¡ÖĞµÄÊı¾İ½á¹¹£¬±ãÓÚµ÷ÊÔ
             try:
-                fortran_data = self.pre_materialImport(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum))
-                # å¯¼å…¥æˆåŠŸåæ˜¾ç¤ºæ¶ˆæ¯
-                mw.writeToMessageArea(u"ææ–™ '{}' å¯¼å…¥æˆåŠŸ".format(aimMaterialName).encode('utf-8'))
-                # æ›´æ–°ææ–™ä¸‹æ‹‰æ¡†
-                self.updateComboBox_15Materials()
+                keys_str = str(list(jsondata.keys()))
+                mw.writeToMessageArea("Selected material data structure: " + keys_str)
             except Exception as e:
-                mw.writeToMessageArea(u"é”™è¯¯: ææ–™å¯¼å…¥å¤±è´¥ - ".encode('utf-8') + str(e))
-                return
+                mw.writeToMessageArea("Error displaying keys: " + str(e))
+            
+            # ¼ì²éÊı¾İ½á¹¹µÄÉî¶È
+            def check_data_depth(data, path=""):
+                if isinstance(data, dict):
+                    for key, value in data.items():
+                        try:
+                            new_path = path + " > " + str(key) if path else str(key)
+                            mw.writeToMessageArea("Data path: " + new_path)
+                            check_data_depth(value, new_path)
+                        except Exception as e:
+                            mw.writeToMessageArea("Error processing path: " + str(e))
+            
+            # Êä³öÊı¾İ½á¹¹µÄÉî¶È
+            mw.writeToMessageArea("Data structure details:")
+            check_data_depth(jsondata)
+            
+            # µ÷ÓÃpre_materialImportµ¼Èë²ÄÁÏ
+            # try:
+            mw.writeToMessageArea("Starting material import...")
+            cmds=("import updatematerial\n"
+                    "updatematerial.pre_materialImport_main({},'{}',{},{})\n".format(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum)))
+            sendCommand(cmds)
+            #fortran_data = self.pre_materialImport(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum))
+            # µ¼Èë³É¹¦ºóÏÔÊ¾ÏûÏ¢
+            mw.writeToMessageArea("Material '" + str(aimMaterialName) + "' imported successfully")
+            # ¸üĞÂ²ÄÁÏÏÂÀ­¿ò
+            self.updateComboBox_15Materials()
+            # except Exception as e:
+            #     mw.writeToMessageArea("Error: Material import failed - " + str(e))
+            #     return
             
         except Exception as e:
-            # å¯¼å…¥å¤±è´¥æ—¶æ˜¾ç¤ºé”™è¯¯ä¿¡æ¯
+            # µ¼ÈëÊ§°ÜÊ±ÏÔÊ¾´íÎóĞÅÏ¢
             mw = getAFXApp().getAFXMainWindow()
-            mw.writeToMessageArea("Error importing material: " + str(e))
-            # æ‰“å°æ›´è¯¦ç»†çš„é”™è¯¯ä¿¡æ¯
+            mw.writeToMessageArea("Error: Exception occurred during material import - " + str(e))
+            # ´òÓ¡¸üÏêÏ¸µÄ´íÎóĞÅÏ¢
             import traceback
-            mw.writeToMessageArea("Detailed error: " + str(traceback.format_exc()))
+            error_trace = str(traceback.format_exc())
+            mw.writeToMessageArea("Detailed error information: " + error_trace)
 
 
     
@@ -994,6 +1058,8 @@ class STPM_test1033DB(AFXDataDialog):
                 item = item.getParent()
             path.reverse()
             data = self.materials_data
+            
+            # self.materials_data¡¾path1¡¿¡¾path2¡¿¡¾path3¡¿=
             for level in path:
                 data = data.get(level)
                 if data is None:
@@ -1008,7 +1074,7 @@ class STPM_test1033DB(AFXDataDialog):
             selected_item_data = get_item_data(selected_item)
             if isinstance(selected_item_data, list):
 
-                self.showDetailDialog(node_name, selected_item_data)
+                self.showDetailDialog(node_name, selected_item)
             # showAFXInformationDialog(mw, str(get_item_path(selected_item)))
 
     # def showDetailDialog(self, node_name, material_data):
@@ -1020,48 +1086,48 @@ class STPM_test1033DB(AFXDataDialog):
     #     label = FXLabel(vframe, "{}: {}".format(node_name, str(material_data)))
     #     detail_dialog.create()
     #     detail_dialog.show()
-    def showDetailDialog(self, node_name, material_data):
-        # åˆ›å»ºå¯¹è¯æ¡†å¹¶ä¼ å…¥æ•°æ®å‰¯æœ¬
-        dialog = MaterialDataDialog(self, "Editing: {}".format(node_name), material_data)
+    def showDetailDialog(self, node_name, material_item):
+        # ´´½¨¶Ô»°¿ò²¢´«ÈëÊı¾İ¸±±¾
+        dialog = MaterialDataDialog(self, "Editing: {}".format(node_name), material_item)
         dialog.create()
-        dialog.showModal()  # æ¨¡æ€æ˜¾ç¤º
+        dialog.showModal()  # Ä£Ì¬ÏÔÊ¾
         
-        # å¯¹è¯æ¡†å…³é—­åå¤„ç†
+        # ¶Ô»°¿ò¹Ø±Õºó´¦Àí
         if dialog.getModifiedData() is not None:
-            # æ›´æ–°ä¸´æ—¶JSONå˜é‡ï¼ˆç¤ºä¾‹å˜é‡åä¸ºtemp_jsonï¼‰
+            # ¸üĞÂÁÙÊ±JSON±äÁ¿£¨Ê¾Àı±äÁ¿ÃûÎªtemp_json£©
             self.temp_json[node_name] = dialog.getModifiedData()
             
-            # å¯é€‰ï¼šç«‹å³æ›´æ–°æ ‘å½¢ç»“æ„æ˜¾ç¤º
+            # ¿ÉÑ¡£ºÁ¢¼´¸üĞÂÊ÷ĞÎ½á¹¹ÏÔÊ¾
             self.updateTree(self.ComboBox_12.getItemText(
                 self.ComboBox_12.getCurrentItem()))
     ###########################################################################
     
     
     def show(self):
-        """æ˜¾ç¤ºå¯¹è¯æ¡†æ—¶è¢«è°ƒç”¨"""
+        """ÏÔÊ¾¶Ô»°¿òÊ±±»µ÷ÓÃ"""
         AFXDataDialog.show(self)
 
-        # æ³¨å†Œä¼šè¯å˜åŒ–ç›‘å¬
+        # ×¢²á»á»°±ä»¯¼àÌı
         session.registerQuery(self.onSessionChange, False)
         
-        # è·å–å¹¶è®¾ç½®å½“å‰æ¨¡å‹åç§°
+        # »ñÈ¡²¢ÉèÖÃµ±Ç°Ä£ĞÍÃû³Æ
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
             self.regModel = mdb.models[currentModelName]
-            # æ³¨å†Œææ–™å˜åŒ–ç›‘å¬
+            # ×¢²á²ÄÁÏ±ä»¯¼àÌı
             self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
-            # è®¾ç½®å½“å‰æ¨¡å‹åç§°
+            # ÉèÖÃµ±Ç°Ä£ĞÍÃû³Æ
             self.form.keyword99Kw.setValue(currentModelName)
         
-        # æ›´æ–°ææ–™ä¸‹æ‹‰æ¡†
+        # ¸üĞÂ²ÄÁÏÏÂÀ­¿ò
         self.updateComboBox_15Materials()
 
     def hide(self):
-        """éšè—å¯¹è¯æ¡†æ—¶è¢«è°ƒç”¨"""
+        """Òş²Ø¶Ô»°¿òÊ±±»µ÷ÓÃ"""
         AFXDataDialog.hide(self)
-        # æ³¨é”€ä¼šè¯å˜åŒ–ç›‘å¬
+        # ×¢Ïú»á»°±ä»¯¼àÌı
         session.unregisterQuery(self.onSessionChange)
-        # æ³¨é”€ææ–™å˜åŒ–ç›‘å¬
+        # ×¢Ïú²ÄÁÏ±ä»¯¼àÌı
         try:
             if self.regModel:
                 self.regModel.materials.unregisterQuery(self.updateComboBox_15Materials)
@@ -1071,84 +1137,85 @@ class STPM_test1033DB(AFXDataDialog):
     def updateComboBox_15Materials(self):
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
-            # æ›´æ–°ComboBoxå†…å®¹
             self.ComboBox_15.clearItems()
-            model = mdb.models[currentModelName]
-            names = model.materials.keys()
+
+            model  = mdb.models[currentModelName]
+            names  = sorted(model.materials.keys())   
+            for name in names:
+                self.ComboBox_15.appendItem(name)
+
+            self.ComboBox_15.appendItem("New")
+
             if names:
-                names.sort()
-                for name in names:
-                    self.ComboBox_15.appendItem(name)
-                self.ComboBox_15.appendItem("New")
-            # æ›´æ–°å…³é”®å­—å€¼
-                self.form.keyword98Kw.setValue(names[0] if self.form.keyword98Kw.getValue() not in names else self.form.keyword98Kw.getValue())
+                default = names[0]
             else:
-                self.form.keyword98Kw.setValue('')
+                default = "New"
+            self.form.keyword98Kw.setValue(default)
+
             self.resize(self.getDefaultWidth(), self.getDefaultHeight())
             return 1
-        else:
-            return 0
+        return 0
 
     def onSessionChange(self):
-        """å½“ä¼šè¯æ”¹å˜æ—¶ï¼ˆåŒ…æ‹¬æ¨¡å‹åˆ‡æ¢ï¼‰è¢«è°ƒç”¨"""
+        """µ±»á»°¸Ä±äÊ±£¨°üÀ¨Ä£ĞÍÇĞ»»£©±»µ÷ÓÃ"""
         currentModelName = getCurrentContext().get('modelName', '')
         if currentModelName in mdb.models:
-            if self.regModel and getattr(self.regModel,'name',None) != currentModelName: #å½“æ¨¡å‹åˆ‡æ¢è¿‡
-                #å–æ¶ˆæ³¨å†Œæ—§æ¨¡å‹ææ–™
+            if self.regModel and getattr(self.regModel,'name',None) != currentModelName: #µ±Ä£ĞÍÇĞ»»¹ı
+                #È¡Ïû×¢²á¾ÉÄ£ĞÍ²ÄÁÏ
                 try:
                     self.regModel.materials.unregisterQuery(self.updateComboBox_15Materials)
                 except:
                     pass
-            #æ³¨å†Œæ–°æ¨¡å‹ææ–™
+            #×¢²áĞÂÄ£ĞÍ²ÄÁÏ
             self.regModel = mdb.models[currentModelName]
             self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
             
-            # æ›´æ–°ModelNameæ˜¾ç¤º
+            # ¸üĞÂModelNameÏÔÊ¾
             self.form.keyword99Kw.setValue(currentModelName)
             
-            # æ›´æ–°ææ–™ä¸‹æ‹‰æ¡†
+            # ¸üĞÂ²ÄÁÏÏÂÀ­¿ò
             self.updateComboBox_15Materials()
             return 1
         else:
             return 0
 
     def pre_materialImport(self, jsondata, aimMaterialName, UVARMnum, SDVnum):
-        """å¯¼å…¥ææ–™æ•°æ®åˆ°å½“å‰æ¨¡å‹
+        """µ¼Èë²ÄÁÏÊı¾İµ½µ±Ç°Ä£ĞÍ
         
         Args:
-            jsondata (dict): ææ–™å±æ€§æ•°æ®å­—å…¸
-            aimMaterialName (str): ç›®æ ‡ææ–™åç§°
-            UVARMnum (int): UVARMå˜é‡æ•°é‡
-            SDVnum (int): SDVå˜é‡æ•°é‡
+            jsondata (dict): ²ÄÁÏÊôĞÔÊı¾İ×Öµä
+            aimMaterialName (str): Ä¿±ê²ÄÁÏÃû³Æ
+            UVARMnum (int): UVARM±äÁ¿ÊıÁ¿
+            SDVnum (int): SDV±äÁ¿ÊıÁ¿
             
         Returns:
-            dict: Fortranç›¸å…³æ•°æ®
+            dict: FortranÏà¹ØÊı¾İ
         """
-        # éªŒè¯å‚æ•°
+        # ÑéÖ¤²ÎÊı
         if not isinstance(jsondata, dict):
-            raise ValueError(u"JSONæ•°æ®å¿…é¡»æ˜¯å­—å…¸æ ¼å¼".encode('utf-8'))
+            raise ValueError(u"JSONÊı¾İ±ØĞëÊÇ×Öµä¸ñÊ½")
         
         if not isinstance(aimMaterialName, str):
-            raise ValueError(u"ææ–™åç§°å¿…é¡»æ˜¯å­—ç¬¦ä¸²ç±»å‹".encode('utf-8'))
+            raise ValueError(u"²ÄÁÏÃû³Æ±ØĞëÊÇ×Ö·û´®ÀàĞÍ")
             
         if not aimMaterialName.strip():
-            raise ValueError(u"ææ–™åç§°ä¸èƒ½ä¸ºç©º".encode('utf-8'))
+            raise ValueError(u"²ÄÁÏÃû³Æ²»ÄÜÎª¿Õ")
             
-        # è·å–å½“å‰æ¨¡å‹
+        # »ñÈ¡µ±Ç°Ä£ĞÍ
         m = self.get_current_model()
         if not m:
-            raise RuntimeError(u"æ— æ³•è·å–å½“å‰æ¨¡å‹".encode('utf-8'))
+            raise RuntimeError(u"ÎŞ·¨»ñÈ¡µ±Ç°Ä£ĞÍ")
             
-        # åˆ›å»ºæˆ–è·å–ææ–™
+        # ´´½¨»ò»ñÈ¡²ÄÁÏ
         try:
             if aimMaterialName in m.materials:
                 mm = m.materials[aimMaterialName]
             else:
                 mm = m.Material(name=aimMaterialName)
         except Exception as e:
-            raise RuntimeError(u"åˆ›å»ºææ–™å¤±è´¥: ".encode('utf-8') + str(e))
+            raise RuntimeError(u"´´½¨²ÄÁÏÊ§°Ü: " + str(e))
             
-        # åˆ†ç¦»ç”¨æˆ·è‡ªå®šä¹‰æ•°æ®å’Œæ ‡å‡†ææ–™æ•°æ®
+        # ·ÖÀëÓÃ»§×Ô¶¨ÒåÊı¾İºÍ±ê×¼²ÄÁÏÊı¾İ
         filtered_data = {}
         fortran_data = {}
         for k, v in jsondata.items():
@@ -1157,15 +1224,15 @@ class STPM_test1033DB(AFXDataDialog):
             else:
                 filtered_data[k] = v
                 
-        # å¤„ç†æ ‡å‡†ææ–™æ•°æ®
+        # ´¦Àí±ê×¼²ÄÁÏÊı¾İ
         try:
             data = self.process_dict(filtered_data)
             for properrow in data:
                 self.addproperty(mm, properrow)
         except Exception as e:
-            raise RuntimeError(u"å¤„ç†ææ–™å±æ€§å¤±è´¥: ".encode('utf-8') + str(e))
+            raise RuntimeError(u"´¦Àí²ÄÁÏÊôĞÔÊ§°Ü: " + str(e))
             
-        # å¤„ç†UVARM
+        # ´¦ÀíUVARM
         try:
             if UVARMnum > 0:
                 mm.UserOutputVariables(n=UVARMnum)
@@ -1173,9 +1240,9 @@ class STPM_test1033DB(AFXDataDialog):
                 if hasattr(mm, 'userOutputVariables'):
                     del mm.userOutputVariables
         except Exception as e:
-            raise RuntimeError(u"è®¾ç½®UVARMå¤±è´¥: ".encode('utf-8') + str(e))
+            raise RuntimeError(u"ÉèÖÃUVARMÊ§°Ü: " + str(e))
             
-        # å¤„ç†SDV
+        # ´¦ÀíSDV
         try:
             if SDVnum > 0:
                 mm.UserDefinedField()
@@ -1186,10 +1253,12 @@ class STPM_test1033DB(AFXDataDialog):
                 if hasattr(mm, 'userDefinedField'):
                     del mm.userDefinedField
         except Exception as e:
-            raise RuntimeError(u"è®¾ç½®SDVå¤±è´¥: ".encode('utf-8') + str(e))
+            raise RuntimeError(u"ÉèÖÃSDVÊ§°Ü: " + str(e))
             
         return fortran_data
 
+
+           
     def process_dict(self, d, path=None):
         if path is None:
             path = []
@@ -1202,7 +1271,7 @@ class STPM_test1033DB(AFXDataDialog):
         return result
 
     def tDepCheck(self, property_name, property_type, property_data):
-        # å®šä¹‰å±æ€§ä¸æœŸæœ›åˆ—æ•°çš„æ˜ å°„
+        # ¶¨ÒåÊôĞÔÓëÆÚÍûÁĞÊıµÄÓ³Éä
         property_columns = {
             'Density': {'Uniform': 1},
             'Elastic': {'Isotropic': 2},
@@ -1218,33 +1287,33 @@ class STPM_test1033DB(AFXDataDialog):
                 'User': 0
             },
         }
-        # è·å–ä¼ å…¥æ•°æ®çš„åˆ—æ•°
+        # »ñÈ¡´«ÈëÊı¾İµÄÁĞÊı
         if not property_data:
-            return OFF  # æ— æ•°æ®æ—¶é»˜è®¤å…³é—­
-        # è·å–å®é™…æ•°æ®åˆ—æ•°
+            return OFF  # ÎŞÊı¾İÊ±Ä¬ÈÏ¹Ø±Õ
+        # »ñÈ¡Êµ¼ÊÊı¾İÁĞÊı
         num_columns = len(property_data[0])
         
-        # è·å–æœŸæœ›åˆ—æ•°
+        # »ñÈ¡ÆÚÍûÁĞÊı
         columns_spec = property_columns.get(property_name)
         if columns_spec is None:
-            return ON  # å±æ€§ä¸åœ¨æ˜ å°„ä¸­ï¼Œé»˜è®¤å¼€å¯
+            return ON  # ÊôĞÔ²»ÔÚÓ³ÉäÖĞ£¬Ä¬ÈÏ¿ªÆô
         
-        # è§£ææœŸæœ›åˆ—æ•°
+        # ½âÎöÆÚÍûÁĞÊı
         if isinstance(columns_spec, dict):
-            # å…ˆæ£€æŸ¥å…·ä½“ç±»å‹
+            # ÏÈ¼ì²é¾ßÌåÀàĞÍ
             expected_num = columns_spec.get(property_type)
-            # å¦‚æœå…·ä½“ç±»å‹ä¸å­˜åœ¨ï¼Œæ£€æŸ¥é€šé…ç¬¦
+            # Èç¹û¾ßÌåÀàĞÍ²»´æÔÚ£¬¼ì²éÍ¨Åä·û
             if expected_num is None and '*' in columns_spec:
                 expected_num = columns_spec['*']
         else:
-            # ç›´æ¥æ•°å­—ç±»å‹è§„æ ¼
+            # Ö±½ÓÊı×ÖÀàĞÍ¹æ¸ñ
             expected_num = columns_spec
         
-        # å¦‚æœæœªæ‰¾åˆ°å…·ä½“ç±»å‹æˆ–é€šé…ç¬¦ï¼Œé»˜è®¤å¼€å¯
+        # Èç¹ûÎ´ÕÒµ½¾ßÌåÀàĞÍ»òÍ¨Åä·û£¬Ä¬ÈÏ¿ªÆô
         if expected_num is None:
             return ON
         
-        # åˆ¤æ–­åˆ—æ•°æ˜¯å¦åŒ¹é…ï¼ˆå®é™…åˆ—æ•° = æœŸæœ›åˆ—æ•° + 1ï¼‰
+        # ÅĞ¶ÏÁĞÊıÊÇ·ñÆ¥Åä£¨Êµ¼ÊÁĞÊı = ÆÚÍûÁĞÊı + 1£©
         return ON if num_columns == expected_num + 1 else OFF
 
     def addproperty(self, mm, datarow):
@@ -1259,7 +1328,7 @@ class STPM_test1033DB(AFXDataDialog):
             print("{pt} is not a abaqusConstants".format(pt=str(property_type).upper().replace(' ', '')))
             print("the type of {pn} is set as default".format(pn=property_name))
         handler_map = {
-            # Densityå¤„ç†
+            # Density´¦Àí
             ('Density', 'Uniform'): {
                 'method': 'Density',
                 'args': {
@@ -1277,7 +1346,7 @@ class STPM_test1033DB(AFXDataDialog):
                     'temperatureDependency': tDCflag
                 }
             },
-            # Creepå¤„ç†
+            # Creep´¦Àí
             ('Creep', 'User_defined'): {
                 'method': 'Creep',
                 'args': {'law': USER, 'table': ()}
@@ -1322,7 +1391,7 @@ class STPM_test1033DB(AFXDataDialog):
                     'temperatureDependency': tDCflag
                 }
             },
-            # Plasticå¤„ç†
+            # Plastic´¦Àí
             ('Plastic', '*'): {
                 'method': 'Plastic',
                 'args': {
@@ -1331,7 +1400,7 @@ class STPM_test1033DB(AFXDataDialog):
                     'temperatureDependency': tDCflag
                 }
             },
-            # Specific Heatå¤„ç†
+            # Specific Heat´¦Àí
             ('Specific Heat', '*'): {
                 'method': 'SpecificHeat',
                 'args': {
@@ -1340,7 +1409,7 @@ class STPM_test1033DB(AFXDataDialog):
                     'temperatureDependency': tDCflag
                 }
             },
-            # é€šç”¨ç±»å‹å¤„ç†ï¼ˆElastic, Expansion, Conductivityï¼‰
+            # Í¨ÓÃÀàĞÍ´¦Àí£¨Elastic, Expansion, Conductivity£©
             ('Elastic', '*'): {
                 'method': property_name,
                 'args': {
@@ -1375,7 +1444,7 @@ class STPM_test1033DB(AFXDataDialog):
             }
         }
         
-        # æŸ¥æ‰¾å¤„ç†ç¨‹åº
+        # ²éÕÒ´¦Àí³ÌĞò
         handler = None
         specific_key = (property_name, property_type)
         wildcard_key = (property_name, '*')
@@ -1386,7 +1455,7 @@ class STPM_test1033DB(AFXDataDialog):
         elif wildcard_key in handler_map:
             handler = handler_map[wildcard_key]
         
-        # å¦‚æœæœªæ‰¾åˆ°å¤„ç†ç¨‹åºï¼ŒæŠ›å‡ºå¼‚å¸¸
+        # Èç¹ûÎ´ÕÒµ½´¦Àí³ÌĞò£¬Å×³öÒì³£
         if not handler:
             #raise ValueError(f"No handler for {property_name}/{property_type}")
             print("No handler for {property_name}/{property_type}".format(property_name=property_name,property_type=property_type))
@@ -1398,17 +1467,17 @@ class STPM_test1033DB(AFXDataDialog):
                 method(**args_dict)
             else:
                 if args_dict:
-                    # æå–ç¬¬ä¸€ä¸ªå‚æ•°çš„å€¼å’Œå‰©ä½™å‚æ•°
+                    # ÌáÈ¡µÚÒ»¸ö²ÎÊıµÄÖµºÍÊ£Óà²ÎÊı
                     keys = list(args_dict.keys())
                     first_value = args_dict[keys[0]]
                     remaining_args = {k: args_dict[k] for k in keys[1:]}
-                    # è°ƒç”¨æ—¶ç¬¬ä¸€ä¸ªå‚æ•°ä½œä¸ºç¬¬ä¸€ä¸ªä½ç½®çš„å‚æ•°ä¼ é€’
+                    # µ÷ÓÃÊ±µÚÒ»¸ö²ÎÊı×÷ÎªµÚÒ»¸öÎ»ÖÃµÄ²ÎÊı´«µİ
                     method(first_value, **remaining_args)
             return
-        # è·å–æ–¹æ³•å¹¶è°ƒç”¨
+        # »ñÈ¡·½·¨²¢µ÷ÓÃ
         method_name = handler['method']
         method_args = handler['args']
-        # æ£€æŸ¥ mm å¯¹è±¡æ˜¯å¦æœ‰å¯¹åº”æ–¹æ³•
+        # ¼ì²é mm ¶ÔÏóÊÇ·ñÓĞ¶ÔÓ¦·½·¨
         if not hasattr(mm, method_name):
             #raise AttributeError(f"Method '{method_name}' not found in mm object")
             print("Method '{method_name}' not found in mm object".format(method_name=method_name))
@@ -1418,63 +1487,80 @@ class STPM_test1033DB(AFXDataDialog):
         method(**method_args)
 
     def onSheetChanged(self, sender, sel, ptr, *args):
-        # è·å–å½“å‰é€‰ä¸­çš„ Sheet ç´¢å¼•
+        # »ñÈ¡µ±Ç°Ñ¡ÖĞµÄ Sheet Ë÷Òı
         selected_sheet_index = self.ComboBox_14.getCurrentItem()
 
-        # è·å–æ–‡ä»¶è·¯å¾„
+        # »ñÈ¡ÎÄ¼şÂ·¾¶
         selected_file_path = self.fileNameKw.getValue()
 
         if selected_file_path:
             try:
-                # æ‰“å¼€ Excel æ–‡ä»¶
+                # ´ò¿ª Excel ÎÄ¼ş
                 workbook = xlrd.open_workbook(selected_file_path)
 
-                # è·å–é€‰ä¸­çš„ Sheet
+                # »ñÈ¡Ñ¡ÖĞµÄ Sheet
                 sheet = workbook.sheet_by_index(selected_sheet_index)
 
-                # å¡«å……è¡¨æ ¼æ•°æ®
+                # Ìî³ä±í¸ñÊı¾İ
                 self.fillTableWithSheetData(sheet)
             except Exception as e:
                 mw = getAFXApp().getAFXMainWindow()
                 mw.writeToMessageArea("Error reading selected sheet: " + str(e))
 
     def fillTableWithSheetData(self, sheet):
-        # è·å–è¡¨æ ¼æ§ä»¶
+        # »ñÈ¡±í¸ñ¿Ø¼ş
         table = self.getTable()
 
-        # æ¸…ç©ºè¡¨æ ¼å†…å®¹
+        # Çå¿Õ±í¸ñÄÚÈİ
         for row in range(table.getNumRows()):
             for col in range(table.getNumColumns()):
-                table.setItemText(row, col, "")  # å°†æ¯ä¸ªå•å…ƒæ ¼å†…å®¹è®¾ç½®ä¸ºç©ºå­—ç¬¦ä¸²
+                table.setItemText(row, col, "")  # ½«Ã¿¸öµ¥Ôª¸ñÄÚÈİÉèÖÃÎª¿Õ×Ö·û´®
 
-        # è®¾ç½®è¡¨å¤´
+        # ÉèÖÃ±íÍ·
         table.setLeadingRowLabels('para\tvalue\ttype\tpart\tfeature')
 
-        # å¡«å……æ•°æ®
+        # Ìî³äÊı¾İ
         for row in range(sheet.nrows):
             for col in range(sheet.ncols):
                 value = sheet.cell_value(row, col)
-                table.setItemText(row + 1, col + 1, str(value))  # ä»ç¬¬äºŒè¡Œå¼€å§‹å¡«å……æ•°æ®
+                table.setItemText(row + 1, col + 1, str(value))  # ´ÓµÚ¶şĞĞ¿ªÊ¼Ìî³äÊı¾İ
 
-        # æ›´æ–°è¡¨æ ¼æ˜¾ç¤º
+        # ¸üĞÂ±í¸ñÏÔÊ¾
         table.update()
 
+    # ©¤©¤©¤ ÈÔÈ»ÔÚ STPM_test1033DB ÀàÌåÄÚ£¬·ÅÔÚÆäËû·½·¨ºóÃæ ©¤©¤©¤
+    def onMainTabChanged(self, sender, sel, ptr):
+        try:
+            if sender is None or not isinstance(sender, FXTabBook):
+                return
+            if sender.getCurrent() == 4:      # 4 ¶ÔÓ¦ Loads&HTC
+                # ´Ó Cycle ¹Ø¼ü×Ö ¡ú Loads&HTC ¹Ø¼ü×Ö
+                self.form.keyword92Kw.setValue(self.form.keyword68Kw.getValue())   # before
+                self.form.keyword80Kw.setValue(self.form.keyword65Kw.getValue())   # composition
+                self.form.keyword93Kw.setValue(self.form.keyword69Kw.getValue())   # after
+                self.form.keyword81Kw.setValue(self.form.keyword77Kw.getValue())   # cycle times
+
+                self.onTextChanged(None, None, None)
+        except Exception as e:
+            mw = getAFXApp().getAFXMainWindow()
+            mw.writeToMessageArea('Í¬²½ Cycle.Loads&HTC Ê§°Ü: {}'.format(e))
+
     def onListItemDoubleClicked(self, sender, sel, ptr, *args):
-        # è·å–å½“å‰é€‰ä¸­çš„ item
+        # »ñÈ¡µ±Ç°Ñ¡ÖĞµÄ item
         try:
             selected_item = self.List_3.getCurrentItem()
             if selected_item!="":
-                # è·å– item çš„æ–‡æœ¬å†…å®¹
+                # »ñÈ¡ item µÄÎÄ±¾ÄÚÈİ
                 item_text = self.List_3.getItemText(selected_item)
     
-                # å°† item çš„æ–‡æœ¬å†…å®¹å†™å…¥ AFXTextField
+                # ½« item µÄÎÄ±¾ÄÚÈİĞ´Èë AFXTextField
                 old_text=self.form.keyword65Kw.getValue()
                 if old_text=='':
                     self.form.keyword65Kw.setValue(str(item_text))
                 else:
                     self.form.keyword65Kw.setValue(self.form.keyword65Kw.getValue()+','+str(item_text))
     
-                # å¦‚æœéœ€è¦ï¼Œå¯ä»¥åœ¨æ¶ˆæ¯åŒºåŸŸæ˜¾ç¤ºé€‰ä¸­çš„å†…å®¹
+                # Èç¹ûĞèÒª£¬¿ÉÒÔÔÚÏûÏ¢ÇøÓòÏÔÊ¾Ñ¡ÖĞµÄÄÚÈİ
                 mw = getAFXApp().getAFXMainWindow()
                 mw.writeToMessageArea("Selected item: " + str(item_text))
         except Exception as e:
@@ -1482,13 +1568,13 @@ class STPM_test1033DB(AFXDataDialog):
             mw.writeToMessageArea(str(e))
 
     def rename_duplicates(self, lst):
-        # ç»Ÿè®¡æ¯ä¸ªå…ƒç´ çš„æ€»å‡ºç°æ¬¡æ•°
+        # Í³¼ÆÃ¿¸öÔªËØµÄ×Ü³öÏÖ´ÎÊı
         freq = Counter(lst)
-        # ç”¨äºè®°å½•æ¯ä¸ªé‡å¤å…ƒç´ ç›®å‰å‡ºç°çš„æ¬¡æ•°
+        # ÓÃÓÚ¼ÇÂ¼Ã¿¸öÖØ¸´ÔªËØÄ¿Ç°³öÏÖµÄ´ÎÊı
         occurrence = defaultdict(int)
         result = []
         for item in lst:
-            # å¦‚æœå…ƒç´ å‡ºç°å¤šæ¬¡ï¼Œåˆ™æ·»åŠ åç¼€
+            # Èç¹ûÔªËØ³öÏÖ¶à´Î£¬ÔòÌí¼Óºó×º
             if freq[item] > 1:
                 occurrence[item] += 1
                 result.append("{}-{}".format(item, occurrence[item]))
@@ -1497,41 +1583,41 @@ class STPM_test1033DB(AFXDataDialog):
         return result
 
     def onTextChanged(self, sender, sel, ptr, *args):
-        # è·å– AFXTextField çš„å†…å®¹
+        # »ñÈ¡ AFXTextField µÄÄÚÈİ
         text = self.form.keyword80Kw.getValue()
-        # å°†å†…å®¹è§£æä¸ºåˆ—è¡¨
+        # ½«ÄÚÈİ½âÎöÎªÁĞ±í
         items = text.split(',')
-        # ä½¿ç”¨ rename_duplicates å‡½æ•°ä¿®é¥°åˆ—è¡¨
+        # Ê¹ÓÃ rename_duplicates º¯ÊıĞŞÊÎÁĞ±í
         renamed_items = self.rename_duplicates(items)
-        # è·å–è¡¨æ ¼æ§ä»¶
+        # »ñÈ¡±í¸ñ¿Ø¼ş
         table = self.getTable1()
-        # æ¸…ç©ºè¡¨æ ¼å†…å®¹
-        for row in range(1, table.getNumRows()):  # ä»ç¬¬2è¡Œå¼€å§‹
-            for col in range(1, table.getNumColumns()):  # ä»ç¬¬2åˆ—å¼€å§‹
+        # Çå¿Õ±í¸ñÄÚÈİ
+        for row in range(1, table.getNumRows()):  # ´ÓµÚ2ĞĞ¿ªÊ¼
+            for col in range(1, table.getNumColumns()):  # ´ÓµÚ2ÁĞ¿ªÊ¼
                 table.setItemText(row, col, "")
-        # å¡«å……è¡¨æ ¼
+        # Ìî³ä±í¸ñ
         for i, item in enumerate(renamed_items):
-            # ç¬¬ä¸€åˆ—
+            # µÚÒ»ÁĞ
             table.setItemText(i + 1, 1, item)
 
-            # ç¬¬äºŒåˆ—
+            # µÚ¶şÁĞ
             if item == 'HOLDING':
                 table.setItemText(i + 1, 2, 'Propagated')
             else:
                 table.setItemText(i + 1, 2, str(i + 1))
-            # ç¬¬ä¸‰åˆ—
+            # µÚÈıÁĞ
             table.setItemText(i + 1, 3, '0')
-            # ç¬¬å››åˆ—
+            # µÚËÄÁĞ
             table.setItemText(i + 1, 4, item)
-            # ç¬¬äº”åˆ—
+            # µÚÎåÁĞ
             table.setItemText(i + 1, 5, '-1')
-        # æ›´æ–°è¡¨æ ¼æ˜¾ç¤º
+        # ¸üĞÂ±í¸ñÏÔÊ¾
         table.update()
 
     def onCycleListChanged(self, sender, sel, ptr, *args):
-        # è·å–æ§ä»¶1çš„å†…å®¹
+        # »ñÈ¡¿Ø¼ş1µÄÄÚÈİ
         cycle_list_text = self.form.keyword65Kw.getValue()
-        # å°†å†…å®¹è®¾ç½®åˆ°æ§ä»¶2
+        # ½«ÄÚÈİÉèÖÃµ½¿Ø¼ş2
         self.form.keyword80Kw.setValue(cycle_list_text)
 
     def getTable(self):
@@ -1548,40 +1634,40 @@ class STPM_test1033DB(AFXDataDialog):
 
     def onTabChanged(self, sender, sel, ptr):
         try:
-            # è·å–å½“å‰é€‰ä¸­çš„æ ‡ç­¾é¡µç´¢å¼•
+            # »ñÈ¡µ±Ç°Ñ¡ÖĞµÄ±êÇ©Ò³Ë÷Òı
             current_tab = sender.getCurrent()
             
-            # å¦‚æœæ˜¯Stressæ ‡ç­¾é¡µï¼ˆç´¢å¼•ä¸º1ï¼‰
+            # Èç¹ûÊÇStress±êÇ©Ò³£¨Ë÷ÒıÎª1£©
             if current_tab == 1:
-                # è·å–æ–‡æœ¬æ¡†å†…å®¹
+                # »ñÈ¡ÎÄ±¾¿òÄÚÈİ
                 text = self.form.keyword80Kw.getValue()
                 if text:
-                    # å°†å†…å®¹è§£æä¸ºåˆ—è¡¨
+                    # ½«ÄÚÈİ½âÎöÎªÁĞ±í
                     items = text.split(',')
-                    # ä½¿ç”¨ rename_duplicates å‡½æ•°ä¿®é¥°åˆ—è¡¨
+                    # Ê¹ÓÃ rename_duplicates º¯ÊıĞŞÊÎÁĞ±í
                     renamed_items = self.rename_duplicates(items)
-                    # è·å–è¡¨æ ¼æ§ä»¶
+                    # »ñÈ¡±í¸ñ¿Ø¼ş
                     table = self.getTable1()
-                    # æ¸…ç©ºè¡¨æ ¼å†…å®¹
-                    for row in range(1, table.getNumRows()):  # ä»ç¬¬2è¡Œå¼€å§‹
-                        for col in range(1, table.getNumColumns()):  # ä»ç¬¬2åˆ—å¼€å§‹
+                    # Çå¿Õ±í¸ñÄÚÈİ
+                    for row in range(1, table.getNumRows()):  # ´ÓµÚ2ĞĞ¿ªÊ¼
+                        for col in range(1, table.getNumColumns()):  # ´ÓµÚ2ÁĞ¿ªÊ¼
                             table.setItemText(row, col, "")
-                    # å¡«å……è¡¨æ ¼
+                    # Ìî³ä±í¸ñ
                     for i, item in enumerate(renamed_items):
-                        # ç¬¬ä¸€åˆ—
+                        # µÚÒ»ÁĞ
                         table.setItemText(i + 1, 1, item)
-                        # ç¬¬äºŒåˆ—
+                        # µÚ¶şÁĞ
                         if item == 'HOLDING':
                             table.setItemText(i + 1, 2, 'Propagated')
                         else:
                             table.setItemText(i + 1, 2, str(i + 1))
-                        # ç¬¬ä¸‰åˆ—
+                        # µÚÈıÁĞ
                         table.setItemText(i + 1, 3, '0')
-                        # ç¬¬å››åˆ—
+                        # µÚËÄÁĞ
                         table.setItemText(i + 1, 4, item)
-                        # ç¬¬äº”åˆ—
+                        # µÚÎåÁĞ
                         table.setItemText(i + 1, 5, '-1')
-                    # æ›´æ–°è¡¨æ ¼æ˜¾ç¤º
+                    # ¸üĞÂ±í¸ñÏÔÊ¾
                     table.update()
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
@@ -1607,17 +1693,18 @@ class STPM_test1033DBFileHandler(FXObject):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def activate(self, sender, sel, ptr):
         if not self.fileNameKw.getValue():
-            self.fileNameKw.setValue(WORK_DIR)
+            self.fileNameKw.setValue(PLUGIN_DIR)
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
             self.fileNameKw, self.readOnlyKw,
             AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
         fileDb.setReadOnlyPatterns('*.odb')
+        fileDb.setDirectory(PLUGIN_DIR)
         fileDb.create()
         fileDb.showModal()
 
 
 class TesttreeDBFileHandler(FXObject):
-    # å®šä¹‰ä¸€ä¸ªæ•´æ•°å¸¸é‡æ¥ä»£è¡¨ fileNameKw æ”¹å˜äº‹ä»¶
+    # ¶¨ÒåÒ»¸öÕûÊı³£Á¿À´´ú±í fileNameKw ¸Ä±äÊÂ¼ş
 
     def __init__(self, form, db, keyword, patterns='*'):
         self.form = form
@@ -1628,25 +1715,26 @@ class TesttreeDBFileHandler(FXObject):
         self.readOnlyKw = AFXBoolKeyword(None, 'readOnly', AFXBoolKeyword.TRUE_FALSE)
         FXObject.__init__(self)
         FXMAPFUNC(self, SEL_COMMAND, AFXMode.ID_ACTIVATE, TesttreeDBFileHandler.activate)
-        # ç›‘å¬ self.JSONNameKw çš„æ”¹å˜äº‹ä»¶
+        # ¼àÌı self.JSONNameKw µÄ¸Ä±äÊÂ¼ş
         self.JSONNameKw.setTarget(self)
-        # ä½¿ç”¨æ•´æ•°å¸¸é‡ä½œä¸ºé€‰æ‹©å™¨
+        # Ê¹ÓÃÕûÊı³£Á¿×÷ÎªÑ¡ÔñÆ÷
         self.JSONNameKw.setSelector(db.ID_FILE_NAME_CHANGED)
-        # æ˜ å°„äº‹ä»¶åˆ°å¤„ç†æ–¹æ³•
+        # Ó³ÉäÊÂ¼şµ½´¦Àí·½·¨
         FXMAPFUNC(self, SEL_COMMAND, db.ID_FILE_NAME_CHANGED, TesttreeDBFileHandler.onFileNameChanged)
 
     def activate(self, sender, sel, ptr):
         if not self.JSONNameKw.getValue():
-            self.JSONNameKw.setValue(os.path.join(WORK_DIR, 'MaterialData.json'))
+            self.JSONNameKw.setValue(PLUGIN_DIR)
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
                                        self.JSONNameKw, self.readOnlyKw,
                                        AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
         fileDb.setReadOnlyPatterns('*.odb')
+        fileDb.setDirectory(PLUGIN_DIR)
         fileDb.create()
         fileDb.showModal()
 
     def onFileNameChanged(self, sender, sel, ptr):
-        # å½“ self.JSONNameKw æ”¹å˜æ—¶ï¼Œè°ƒç”¨ outputFilePath æ–¹æ³•
+        # µ± self.JSONNameKw ¸Ä±äÊ±£¬µ÷ÓÃ outputFilePath ·½·¨
         self.outputFilePath(sender, sel, ptr)
 
     def outputFilePath(self, sender, sel, ptr):
@@ -1679,11 +1767,12 @@ class XslFileHandler(FXObject):
 
     def activate(self, sender, sel, ptr):
         if not self.fileNameKw.getValue():
-            self.fileNameKw.setValue(os.path.join(WORK_DIR, 'ParaModelingData.xls'))
+            self.fileNameKw.setValue(PLUGIN_DIR)
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
                                        self.fileNameKw, self.readOnlyKw,
                                        AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
         fileDb.setReadOnlyPatterns('*.odb')
+        fileDb.setDirectory(PLUGIN_DIR)
         fileDb.create()
         fileDb.showModal()
 
@@ -1697,40 +1786,40 @@ class XslFileHandler(FXObject):
         mw.writeToMessageArea('Selected file path: ' + str(selectedFilePath))
 
         try:
-            # è¯»å– Excel æ–‡ä»¶
+            # ¶ÁÈ¡ Excel ÎÄ¼ş
             workbook = xlrd.open_workbook(selectedFilePath)
-            # è·å–æ‰€æœ‰ Sheet åç§°
+            # »ñÈ¡ËùÓĞ Sheet Ãû³Æ
             sheet_names = workbook.sheet_names()
             if len(sheet_names) > 1:
                 mw.writeToMessageArea("yes")
 
-            # æ›´æ–° ComboBox_14 çš„ä¸‹æ‹‰æ¡†å†…å®¹
+            # ¸üĞÂ ComboBox_14 µÄÏÂÀ­¿òÄÚÈİ
             combo_box = self.db.getComboBox14()
-            combo_box.clearItems()  # æ¸…ç©ºç°æœ‰å†…å®¹
+            combo_box.clearItems()  # Çå¿ÕÏÖÓĞÄÚÈİ
             for sheet_name in sheet_names:
-                combo_box.appendItem(text=str(sheet_name))  # æ·»åŠ  Sheet åç§°åˆ°ä¸‹æ‹‰æ¡†
-            sheet = workbook.sheet_by_index(0)  # å‡è®¾è¯»å–ç¬¬ä¸€ä¸ªå·¥ä½œè¡¨
+                combo_box.appendItem(text=str(sheet_name))  # Ìí¼Ó Sheet Ãû³Æµ½ÏÂÀ­¿ò
+            sheet = workbook.sheet_by_index(0)  # ¼ÙÉè¶ÁÈ¡µÚÒ»¸ö¹¤×÷±í
             sheet1 = workbook.sheet_by_index(1)
             mw.writeToMessageArea(str(sheet1))
 
-            # è·å–è¡¨æ ¼æ§ä»¶
+            # »ñÈ¡±í¸ñ¿Ø¼ş
             table = self.db.getTable()
 
-            # æ¸…ç©ºè¡¨æ ¼å†…å®¹
+            # Çå¿Õ±í¸ñÄÚÈİ
             for row in range(table.getNumRows()):
                 for col in range(table.getNumColumns()):
-                    table.setItemText(row, col, "")  # å°†æ¯ä¸ªå•å…ƒæ ¼å†…å®¹è®¾ç½®ä¸ºç©ºå­—ç¬¦ä¸²
+                    table.setItemText(row, col, "")  # ½«Ã¿¸öµ¥Ôª¸ñÄÚÈİÉèÖÃÎª¿Õ×Ö·û´®
 
-            # è®¾ç½®è¡¨å¤´
+            # ÉèÖÃ±íÍ·
             table.setLeadingRowLabels('para\tvalue\ttype\tpart\tfeature')
 
-            # å¡«å……æ•°æ®
+            # Ìî³äÊı¾İ
             for row in range(sheet.nrows):
                 for col in range(sheet.ncols):
                     value = sheet.cell_value(row, col)
-                    table.setItemText(row + 1, col + 1, str(value))  # ä»ç¬¬äºŒè¡Œå¼€å§‹å¡«å……æ•°æ®
+                    table.setItemText(row + 1, col + 1, str(value))  # ´ÓµÚ¶şĞĞ¿ªÊ¼Ìî³äÊı¾İ
 
-            # æ›´æ–°è¡¨æ ¼æ˜¾ç¤º
+            # ¸üĞÂ±í¸ñÏÔÊ¾
             table.update()
 
         except Exception as e:
@@ -1748,25 +1837,26 @@ class InputFileHandler(FXObject):
         self.readOnlyKw = AFXBoolKeyword(None, 'readOnly', AFXBoolKeyword.TRUE_FALSE)
         FXObject.__init__(self)
         FXMAPFUNC(self, SEL_COMMAND, AFXMode.ID_ACTIVATE, InputFileHandler.activate)
-        # ç›‘å¬ self.InputDataName çš„æ”¹å˜äº‹ä»¶
+        # ¼àÌı self.InputDataName µÄ¸Ä±äÊÂ¼ş
         self.InputDataName.setTarget(self)
-        # ä½¿ç”¨æ•´æ•°å¸¸é‡ä½œä¸ºé€‰æ‹©å™¨
+        # Ê¹ÓÃÕûÊı³£Á¿×÷ÎªÑ¡ÔñÆ÷
         self.InputDataName.setSelector(db.ID_FILE_NAME_CHANGED)
-        # æ˜ å°„äº‹ä»¶åˆ°å¤„ç†æ–¹æ³•
+        # Ó³ÉäÊÂ¼şµ½´¦Àí·½·¨
         FXMAPFUNC(self, SEL_COMMAND, db.ID_FILE_NAME_CHANGED, InputFileHandler.onFileNameChanged)
 
     def activate(self, sender, sel, ptr):
         if not self.InputDataName.getValue():
-            self.InputDataName.setValue(WORK_DIR)
+            self.InputDataName.setValue(PLUGIN_DIR)
         fileDb = AFXFileSelectorDialog(getAFXApp().getAFXMainWindow(), 'Select a File',
                                        self.InputDataName, self.readOnlyKw,
                                        AFXSELECTFILE_ANY, self.patterns, self.patternTgt)
+        fileDb.setDirectory(PLUGIN_DIR)
         fileDb.setReadOnlyPatterns('*.odb')
         fileDb.create()
         fileDb.showModal()
 
     def onFileNameChanged(self, sender, sel, ptr):
-        # å½“ self.InputDataName æ”¹å˜æ—¶ï¼Œè°ƒç”¨ outputFilePath æ–¹æ³•
+        # µ± self.InputDataName ¸Ä±äÊ±£¬µ÷ÓÃ outputFilePath ·½·¨
         self.outputFilePath(sender, sel, ptr)
 
     def outputFilePath(self, sender, sel, ptr):
@@ -1775,12 +1865,12 @@ class InputFileHandler(FXObject):
         mw.writeToMessageArea('Selected file path: ' + str(selectedFilePath))
         list = self.db.getList3()
         try:
-            # è¯»å– Excel æ–‡ä»¶
+            # ¶ÁÈ¡ Excel ÎÄ¼ş
             workbook = xlrd.open_workbook(selectedFilePath)
-            # è·å–æ‰€æœ‰ Sheet åç§°
+            # »ñÈ¡ËùÓĞ Sheet Ãû³Æ
             sheet_names = workbook.sheet_names()
 
-            # æ¸…ç©º List_3 çš„å†…å®¹
+            # Çå¿Õ List_3 µÄÄÚÈİ
             if list:
                 list.clearItems()
 
@@ -1792,58 +1882,60 @@ class InputFileHandler(FXObject):
             mw.writeToMessageArea("Error reading Excel file: " + str(e))
 
 class MaterialDataDialog(AFXDialog):
-    def __init__(self, owner, title, data):
+    def __init__(self, owner, title, item):
         AFXDialog.__init__(self, owner, title, 
                           self.OK|self.CANCEL, 
                           opts=DIALOG_NORMAL, w=400, h=300)
-        self.temp_data = data  # å­˜å‚¨åŸå§‹æ•°æ®çš„å‰¯æœ¬
-        self.modified_data = None  # å­˜å‚¨ä¿®æ”¹åçš„æ•°æ®
-        
-        # åˆ›å»ºå‚ç›´å¸ƒå±€æ¡†æ¶
+        data = self.get_item_data(owner, item)
+        self.temp_data = data  # ´æ´¢Ô­Ê¼Êı¾İµÄ¸±±¾
+        self.modified_data = None  # ´æ´¢ĞŞ¸ÄºóµÄÊı¾İ
+        self.owner = owner
+        self.item = item    
+        # ´´½¨´¹Ö±²¼¾Ö¿ò¼Ü
         vframe = FXVerticalFrame(self, opts=LAYOUT_FILL_X|LAYOUT_FILL_Y)
         
-        # åˆ›å»ºå¯ç¼–è¾‘è¡¨æ ¼
+        # ´´½¨¿É±à¼­±í¸ñ
         self.table = AFXTable(vframe, 20, 2, 200, 6, None, 0, 
                             AFXTABLE_EDITABLE|LAYOUT_FILL_X|LAYOUT_FILL_Y)
         self.table.setPopupOptions(AFXTable.POPUP_ALL)
         
-        # æ ¹æ®æ•°æ®ç»“æ„åˆå§‹åŒ–è¡¨æ ¼
+        # ¸ù¾İÊı¾İ½á¹¹³õÊ¼»¯±í¸ñ
         self._initialize_table(data)
         
-        # ç»‘å®šç¡®å®šæŒ‰é’®äº‹ä»¶
+        # °ó¶¨È·¶¨°´Å¥ÊÂ¼ş
         # self.acceptCommand = self.onAccept
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_OK, self.onAccept)
 
     def _initialize_table(self, data):
-        """æ ¹æ®ç©ºå€¼/ä¸€ç»´åˆ—è¡¨/äºŒç»´åˆ—è¡¨åˆå§‹åŒ–è¡¨æ ¼"""
-        # æ¸…ç©ºè¡¨æ ¼
+        """¸ù¾İ¿ÕÖµ/Ò»Î¬ÁĞ±í/¶şÎ¬ÁĞ±í³õÊ¼»¯±í¸ñ"""
+        # Çå¿Õ±í¸ñ
         self.table.setTableSize(numRows=1, numColumns=1)
         try:
-            if not data:  # ç©ºå€¼å¤„ç†
-                # é»˜è®¤1è¡Œ1åˆ—å ä½
-                self.table.setTableSize(numRows=2, numColumns=1)  # è¡Œæ•°=2ï¼ˆè¡¨å¤´+1è¡Œï¼‰ï¼Œåˆ—æ•°=1
+            if not data:  # ¿ÕÖµ´¦Àí
+                # Ä¬ÈÏ1ĞĞ1ÁĞÕ¼Î»
+                self.table.setTableSize(numRows=2, numColumns=1)  # ĞĞÊı=2£¨±íÍ·+1ĞĞ£©£¬ÁĞÊı=1
                 # self.table.setLeadingRowLabels("Value")
                 return
             
-            if isinstance(data[0], (list, tuple)):  # äºŒç»´åˆ—è¡¨
-                # ç¡®å®šæœ€å¤§åˆ—æ•°
+            if isinstance(data[0], (list, tuple)):  # ¶şÎ¬ÁĞ±í
+                # È·¶¨×î´óÁĞÊı
                 max_columns = max(len(row) for row in data)
-                # è®¾ç½®è¡¨æ ¼å°ºå¯¸ï¼šè¡Œæ•°=æ•°æ®è¡Œæ•°+1ï¼ˆè¡¨å¤´ï¼‰ï¼Œåˆ—æ•°=æœ€å¤§åˆ—æ•°
+                # ÉèÖÃ±í¸ñ³ß´ç£ºĞĞÊı=Êı¾İĞĞÊı+1£¨±íÍ·£©£¬ÁĞÊı=×î´óÁĞÊı
                 self.table.setTableSize(numRows=len(data), numColumns=max_columns)
-                # ç”Ÿæˆè¡¨å¤´ï¼ˆColumn 1, Column 2...ï¼‰
+                # Éú³É±íÍ·£¨Column 1, Column 2...£©
                 # header = "".join(["Column {}\t".format(i+1) for i in range(max_columns)])
                 # self.table.setLeadingRowLabels(header)
-                # å¡«å……æ•°æ®ï¼ˆè¡Œå’Œåˆ—ä»1å¼€å§‹ï¼‰
+                # Ìî³äÊı¾İ£¨ĞĞºÍÁĞ´Ó1¿ªÊ¼£©
                 for row_idx, row in enumerate(data):
                     for col_idx, value in enumerate(row):
-                        if col_idx + 1 > max_columns:  # é˜²æ­¢è¶Šç•Œ
+                        if col_idx + 1 > max_columns:  # ·ÀÖ¹Ô½½ç
                             break
                         self.table.setItemText(row_idx , col_idx , str(value))
-            else:  # ä¸€ç»´åˆ—è¡¨
-                # è®¾ç½®è¡¨æ ¼å°ºå¯¸ï¼šè¡Œæ•°=æ•°æ®é•¿åº¦+1ï¼ˆè¡¨å¤´ï¼‰ï¼Œåˆ—æ•°=1
+            else:  # Ò»Î¬ÁĞ±í
+                # ÉèÖÃ±í¸ñ³ß´ç£ºĞĞÊı=Êı¾İ³¤¶È+1£¨±íÍ·£©£¬ÁĞÊı=1
                 self.table.setTableSize(numRows=len(data), numColumns=1)
                 # self.table.setLeadingRowLabels("Value")
-                # å¡«å……æ•°æ®ï¼ˆåˆ—ç´¢å¼•å›ºå®šä¸º1ï¼‰
+                # Ìî³äÊı¾İ£¨ÁĞË÷Òı¹Ì¶¨Îª1£©
                 for row_idx, value in enumerate(data):
                     self.table.setItemText(row_idx , 0, str(value))
         except Exception as e:
@@ -1851,21 +1943,21 @@ class MaterialDataDialog(AFXDialog):
             mw.writeToMessageArea(str(e))
 
     def onAccept(self, sender, sel, ptr,*args):
-        """ä¿å­˜è¡¨æ ¼æ•°æ®ï¼ˆä¸¥æ ¼æ£€æŸ¥ç´¢å¼•èŒƒå›´ï¼‰"""
+        """±£´æ±í¸ñÊı¾İ£¨ÑÏ¸ñ¼ì²éË÷Òı·¶Î§£©"""
         try:
             num_rows = self.table.getNumRows()
             num_cols = self.table.getNumColumns()
             new_data = []
     
-            if num_cols == 1:  # ä¸€ç»´åˆ—è¡¨
+            if num_cols == 1:  # Ò»Î¬ÁĞ±í
                 for row in range(0, num_rows):  
                     value = self.table.getItemText(row, 0)
                     if value.strip():
                         new_data.append(self._convert_value(value))
-            else:  # äºŒç»´åˆ—è¡¨
+            else:  # ¶şÎ¬ÁĞ±í
                 for row in range(0, num_rows):  
                     row_data = []
-                    for col in range(0, num_cols):  # åˆ—ä»1åˆ°num_cols
+                    for col in range(0, num_cols):  # ÁĞ´Ó1µ½num_cols
                         value = self.table.getItemText(row, col)
                         if value.strip():
                             row_data.append(self._convert_value(value))
@@ -1873,12 +1965,16 @@ class MaterialDataDialog(AFXDialog):
                         new_data.append(row_data)
             
             self.modified_data = new_data if new_data else None
+            self.update_item_data(self.owner,self.item,self.modified_data)
+            mw = getAFXApp().getAFXMainWindow()
+            mw.writeToMessageArea("±£´æ³É¹¦{}".format(self.modified_data))
+            # mw.writeToMessageArea("±£´æ³É¹¦{}".format(self.owner.materials_data))
             self.hide()
         except Exception as e:
-            showAFXErrorDialog(getAFXApp().getAFXMainWindow(), "ä¿å­˜å¤±è´¥: {}".format(str(e)))
+            showAFXErrorDialog(getAFXApp().getAFXMainWindow(), "±£´æÊ§°Ü: {}".format(str(e)))
 
     def _convert_value(self, value_str):
-        """å°è¯•è½¬æ¢æ•°æ®ç±»å‹"""
+        """³¢ÊÔ×ª»»Êı¾İÀàĞÍ"""
         try:
             return json.loads(value_str)
         except:
@@ -1892,6 +1988,37 @@ class MaterialDataDialog(AFXDialog):
                 return str(value_str)
 
     def getModifiedData(self):
-        """è·å–ä¿®æ”¹åçš„æ•°æ®"""
+        """»ñÈ¡ĞŞ¸ÄºóµÄÊı¾İ"""
         return self.modified_data
-
+    
+    
+    def update_item_data(self,owner,item,new_data):
+        path = []
+        while item is not None:
+            path.append(owner.tree.getItemText(item))
+            item = item.getParent()
+        path.reverse()
+        data = owner.materials_data
+        #owner.materials_data['2.25Cr1Mo']['Density']['Uniform']['ASME']=new_data
+        for level in path[:-1]:
+            data = data[level]
+            if data is None:
+                return None
+        data[path[-1]] = new_data
+        return data
+    
+    # »ñÈ¡itemµÄdata
+    def get_item_data(self, owner, item):
+        path = []
+        while item is not None:
+            path.append(owner.tree.getItemText(item))
+            item = item.getParent()
+        path.reverse()
+        data = owner.materials_data
+        
+        # owner.materials_data¡¾path1¡¿¡¾path2¡¿¡¾path3¡¿=
+        for level in path:
+            data = data.get(level)
+            if data is None:
+                return None
+        return data

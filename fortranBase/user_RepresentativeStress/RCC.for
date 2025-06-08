@@ -1,0 +1,7 @@
+      pure FUNCTION RCC_SQ(CMISES,CSPXY)
+        REAL*8,intent(in) :: CMISES, CSPXY(3)
+        REAL*8 I1
+        REAL*8 RCC_SQ
+        I1=CSPXY(1)+CSPXY(2)+CSPXY(3)
+        RCC_SQ=MAX((0.867D0*CMISES+0.133D0*I1),0.0D0)
+      END FUNCTION RCC_SQ
