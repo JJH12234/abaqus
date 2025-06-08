@@ -506,7 +506,7 @@ class STPM_test1033DB(AFXDataDialog):
         table.showHorizontalGrid(True)
         table.showVerticalGrid(True)
 
-        if self.HTCList:
+         if self.HTCList:
             try:
                 for i in range(0, len(self.HTCList)):
                     table.setItemText(i + 1, 1, str(self.HTCList[i]))
@@ -516,17 +516,19 @@ class STPM_test1033DB(AFXDataDialog):
                 print("Error filling table:", str(e))
 
         try:
+            m = self.get_current_model()
             self.STRESSList = []
-            # mw = getAFXApp().getAFXMainWindow()
-            # mw.writeToMessageArea(str(m.loads.keys()))
-            for i in m.loads.keys():
-                self.STRESSList.append(i)
-            self.STRESSList = ['none1', 'none2']  # test
+            model_loads = m.loads.keys() 
+            if not model_loads:
+                mw.writeToMessageArea("Debug: m.loads is None or empty.")
+            else:
+                for i in model_loads:
+                    self.STRESSList.append(i)
+            mw.writeToMessageArea("Debug: self.STRESSList after try block: " + str(self.STRESSList))
 
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
-            mw.writeToMessageArea("no model2")
-            self.STRESSList = ['error1', 'error2']
+            mw.writeToMessageArea(str(e))
 
         tabItem = FXTabItem(p=TabBook_5, text='Stress', ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
@@ -555,7 +557,9 @@ class STPM_test1033DB(AFXDataDialog):
         table.showVerticalGrid(True)
         if self.STRESSList:
             try:
-                for i in range(0, len(self.STRESSList)):
+                for i in range(len(self.STRESSList)):
+                    if i >= table.getNumRows() - 1: # 如果需要更多行
+                        table.insertRows(table.getNumRows(), 1) # 在末尾插入新行
                     table.setItemText(i + 1, 1, str(self.STRESSList[i]))
                     table.setItemText(i + 1, 2, '%OP%_%NM%')
             except Exception as e:
