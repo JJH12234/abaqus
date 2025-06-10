@@ -12,24 +12,9 @@ import ast
 import json
 import numpy as np
 import csv
-import os, sys, subprocess, platform, shlex
-import brittle_assess
-# import __main__
-# def launch_brittle_gui():
-#     """
-#     用 Abaqus 自带 python 启动独立 Tk 进程，
-#     再也不会重 import 本脚本 → 不会 ImportError → 不会瞬退。
-#     """
-#     python_exe  = sys.executable                               # Abaqus 自带 2.7
-#     script_path = os.path.join(os.path.dirname(__file__),
-#                                'brittle_assess.py')
-
-#     # Windows：调试期用 CREATE_NEW_CONSOLE；发布时可换成 CREATE_NO_WINDOW
-#     flags = subprocess.CREATE_NEW_CONSOLE if platform.system() == 'Windows' else 0
-#     subprocess.Popen([python_exe, script_path],
-#                      creationflags=flags, close_fds=True)
-# # def _start_brittle_gui():
-#     run_gui()
+# import brittle_assess
+import datetime
+datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
 def kernal_analsys(analysetype,
            CreepDamageField,FatigueDamageField,CFICriterion,CreepDamageFieldnum,FatigueDamageFieldnum,
            pathStyle,numIntervals,shape,
@@ -73,14 +58,8 @@ def kernal_analsys(analysetype,
         kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=picks1,kw2=picks2)
     elif analysetype=='Brittle failure':
         kernel_BrittleFailure(tabledata,Brittle_variables,path_extras_configs=path_extras_configs)
-    #     execfile(
-    # 'D:/SIMULIA/EstProducts/2023/win_b64/code/python2.7/lib/abaqus_plugins/elasticprogram/brittle_assess.py', 
-    # __main__.__dict__)
         # brittle_assess.run_gui()
-        # mp.freeze_support() 
-        # brittle_assess.launch_brittle_gui()         # ★ Windows 必须
-        # launch_brittle_gui()
-        # brittle_assess.launch_brittle_gui()
+        execfile('C:/Users/mrvoid/abaqus_plugins/Inelasticprogram/brittle_assess.py',__main__.__dict__)
 def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_configs={}):
     viewport=get_current_viewport()
     odbDisplay=get_current_odbdp()
@@ -89,9 +68,9 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
     #激活每循环最后分析步
     ActiveStepsFrames()
     if Step_configs['extrapolateType']=='Direct':
-        ActiveStepsFrames('mod','last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
+        ActiveStepsFrames(SSb='mod',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     elif Step_configs['extrapolateType']=='Add':
-        ActiveStepsFrames('mod and last','last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
+        ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     #处理节点输入
     nodelabels, sortedflagged=process_points_data(tabledata['Points'],kw1,kw2)
     print(sortedflagged)
@@ -119,17 +98,25 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
             Damages[part][node]['CreepDamageByCycle']=[row[1] for row in xy.data]
         elif field==FatDamUV:
             Damages[part][node]['FatigueDamageByCycle']=[row[1] for row in xy.data]
+            if Step_configs['extrapolateType']=='Add':
+                Damages[part][node]['FatigueDamageByCycle']=Damages[part][node]['FatigueDamageByCycle'][:-1]#去掉HOLDING点
     ###外推
     if Step_configs['extrapolateType']=='Direct':
         for part in Damages:
             for node in Damages[part]:
-                Damages[part][node]['FatigueDamageByCycle']=directExtrapolate(Damages[part][node]['FatigueDamageByCycle'],Step_configs['extrapolateTimes'])
-                Damages[part][node]['CreepDamageByCycle']=directExtrapolate(Damages[part][node]['CreepDamageByCycle'],Step_configs['extrapolateTimes'])
+                Damages[part][node]['FatigueDamageByCycle']=directExtrapolate(Damages[part][node]['FatigueDamageAccumByCycle'],Step_configs['extrapolateTimes'])
+                Damages[part][node]['CreepDamageByCycle']=directExtrapolate(Damages[part][node]['CreepDamageAccumByCycle'],Step_configs['extrapolateTimes'])
     elif Step_configs['extrapolateType']=='Add':
         Damages[part][node]['FatigueDamageByCycle'].append(Damages[part][node]['FatigueDamageByCycle'][-1])
         Damages[part][node]['CreepDamageByCycle'].append(Damages[part][node]['CreepDamageByCycle'][-1])
         for stepname in Step_configs['addTypeStepNames']:
-            ActiveStepsFrames('Name','range',f_str='0,-1',name=stepname)
+            # print(stepname)
+            try:
+                ActiveStepsFrames(SSb='Name',SFb='range',f_str='0,-1',name=stepname)
+            except ValueError as e:
+                e_unicode = unicode(str(e), 'gb18030', errors='replace')
+                print(u"{},增补将跳过".format(e_unicode).encode('GB18030'))
+                continue
             xylist=getxyData_point(args)
             for xy in xylist:
                 part,node=xy.yValuesLabel.split('at part instance ')[-1].split(' node ')
@@ -138,16 +125,17 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 delta=xy.data[-1][1]-xy.data[0][1]
                 if field==CreDamUV:
                     Damages[part][node]['AddCreepDamage_'+stepname]=delta
-                    Damages[part][node]['FatigueDamageByCycle'][-1]+=delta
+                    Damages[part][node]['CreepDamageByCycle'][-1]+=delta
                 elif field==FatDamUV:
                     Damages[part][node]['AddFatigueDamage_'+stepname]=delta
-                    Damages[part][node]['CreepDamageByCycle'][-1]+=delta
+                    Damages[part][node]['FatigueDamageByCycle'][-1]+=delta
     for part in Damages:
         for node in Damages[part]:
             Damages[part][node]['judge']='Pass' if is_below_double_breakline(Damages[part][node]['FatigueDamageByCycle'][-1],Damages[part][node]['CreepDamageByCycle'][-1],Step_configs['damageJudge']) else 'NotPass'
     ###输出
-    with open(r'Damage.json', 'w') as f:
+    with open(r'Damage {}.json'.format(datetimenow), 'w') as f:
         json.dump(Damages, f, indent=4)
+    print(u'Damage {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
 
 def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_configs={}):
     viewport=get_current_viewport()
@@ -156,10 +144,10 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
     odbData=get_current_odbdata()
     #激活每循环最后分析步
     ActiveStepsFrames()
-    if Step_configs['extrapolateType']=='Direct':
-        ActiveStepsFrames('mod','last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
+    if Step_configs['extrapolateType']=='Direct' or Step_configs['extrapolateType']=='None':
+        ActiveStepsFrames(SSb='mod',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     elif Step_configs['extrapolateType']=='Add':
-        ActiveStepsFrames('mod and last','last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
+        ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     #处理节点输入
     nodelabels, sortedflagged=process_points_data(tabledata['Points'],kw1,kw2)
     print(sortedflagged)
@@ -204,7 +192,12 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                         IE[part][node]['PE'+component].append(IE[part][node]['PE'+component][-1])
                         IE[part][node]['CE'+component].append(IE[part][node]['CE'+component][-1])
                         for stepname in Step_configs['addTypeStepNames']:
-                            ActiveStepsFrames('Name','range',f_str='0,-1',name=stepname)
+                            try:
+                                ActiveStepsFrames(SSb='Name',SFb='range',f_str='0,-1',name=stepname)
+                            except ValueError as e:
+                                e_unicode = unicode(str(e), 'gb18030', errors='replace')
+                                print(u"{},增补将跳过".format(e_unicode).encode('GB18030'))
+                                continue
                             xylist=getxyData_point(args)
                             for xy in xylist:
                                 part,node=xy.yValuesLabel.split('at part instance ')[-1].split(' node ')
@@ -222,12 +215,15 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
             PEs=[ IE[part][node]['PE'+c][-1] if IE[part][node]['PE'+c] else 0 for c in components]
             IEs=[ CEs[i] + PEs[i] for i in range(len(CEs)) ]
             IE[part][node]['FinalIEmax']=max_principal_strain(*IEs)
-            judge=0.025 if node.split('node')[-1] in sortedflagged.get(part) else 0.05
+            if sortedflagged!={} and (node.split('node')[-1] in sortedflagged.get(part)):
+                judge=0.025
+            else:
+                judge=0.05
             IE[part][node]['judge']='Pass' if IE[part][node]['FinalIEmax']<judge else 'NotPass >{}%'.format(str(judge*100))
     ###输出
-    with open(r'IE_point.json', 'w') as f:
+    with open(r'IE_point {}.json'.format(datetimenow), 'w') as f:
         json.dump(IE, f, indent=4)
-        
+    print(u'IE_point {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
     #处理路径输入
     processd_path=process_path_data(tabledata['Paths'])
     ActiveStepsFrames()
@@ -235,10 +231,10 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
     variables=[{'name':'PE' ,},{'name':'CE' ,},]
     #激活每循环最后分析步
     ActiveStepsFrames()
-    if Step_configs['extrapolateType']=='Direct':
-        ActiveStepsFrames('mod','last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
+    if Step_configs['extrapolateType']=='Direct' or Step_configs['extrapolateType']=='None':
+        ActiveStepsFrames(SSb='mod',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     elif Step_configs['extrapolateType']=='Add':
-        ActiveStepsFrames('mod and last','last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
+        ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     # 创建分析步名称到索引的映射
     step_names = list(odbData.steps.keys())
     step_indices = {name: idx for idx, name in enumerate(step_names)}
@@ -246,7 +242,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
     components=['11','22','33','12','13','23']
     for item in processd_path:
         pthname,expression,flag=item
-        IE[pthname]={}
+        IE[pthname]=OrderedDict()
         ###循环创建分析步
         pth=creatPath(pthname,expression)
         # 遍历每个激活的分析步及其增量步
@@ -312,8 +308,9 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                 judge=0.01 if not flag else 0.02
             IE[pthname]['judge'+ptype]='Pass' if IE[pthname]['FinalIEmax'+ptype]<judge else 'NotPass >{}%'.format(str(judge*100))
     ###输出
-    with open(r'IE_path.json', 'w') as f:
+    with open(r'IE_path {}.json'.format(datetimenow), 'w') as f:
         json.dump(IE, f, indent=4)
+    print(u'IE_path {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
 
 def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
     viewport=get_current_viewport()
@@ -331,8 +328,10 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
         pthname,expression,flag=item
         ###循环创建分析步
         pth=creatPath(pthname,expression)
-        file_S = open('{}_{}.txt'.format(pthname,user_variables[0]['name']), 'w')
-        file_T = open('{}_{}.txt'.format(pthname,user_variables[1]['name']), 'w')
+        file_Sname='{}_{} {}.txt'.format(pthname,user_variables[0]['name'],datetimenow)
+        file_Tname='{}_{} {}.txt'.format(pthname,user_variables[1]['name'],datetimenow)
+        file_S = open(file_Sname, 'w')
+        file_T = open(file_Tname, 'w')
         # 遍历每个激活的分析步及其增量步
         total_time = 0.0
         for step_info in odbData.activeFrames:
@@ -350,7 +349,7 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
                     # 如果是直接给出的整数（如元组中的离散值），直接添加到列表
                     all_frame_indices.append(expr)
             # 内循环遍历每个激活的增量步索引
-            for frame_idx in all_frame_indices:
+            for counter,frame_idx in enumerate(all_frame_indices,1):
                 current_time = odb.steps.values()[step_idx].frames[frame_idx].frameValue
                 total_time += current_time
                 # 处理step_idx和frame_idx的组合
@@ -364,10 +363,14 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
                     datas=[total_time]+[row[1] for row in xy.data]
                     if varname in ['Mises','Tresca','Max. Principal','Min. Principal','Mid. Principal','Max. Principal (Abs)','S11','S22','S33','S12','S13','S23','Pressure']:
                         file_S.write('\t'.join(map(str, datas)) + '\n')
+                        # print(u'正在写入file_S {}:step:{} {}/{}'.format(pthname,step_name,str(counter),len(all_frame_indices)).encode('GB18030'))
                     elif varname=='NT11':
                         file_T.write('\t'.join(map(str, datas)) + '\n')    
+                        # print(u'正在写入file_T {}:step:{} {}/{}'.format(pthname,step_name,str(counter),len(all_frame_indices)).encode('GB18030'))
         file_S.close()
+        print(u'{} 已输出到工作路径'.format(file_Sname).encode('GB18030'))
         file_T.close()
+        print(u'{} 已输出到工作路径'.format(file_Tname).encode('GB18030'))
     pass
 
 def directExtrapolate(lst, n):
@@ -732,8 +735,14 @@ def ActiveStepsFrames(SSb='all',SFb='all',bstep=0,cstep=1,astep=0,f_str='0:-1',n
             for i, step in enumerate(steps, 1)  # python2.7 start参数写法
             if i % cstep == 0
         ]
-    elif SSb == 'Name':
-        SelectCell = [(step, fcell) for step in steps if name in step]
+    elif SSb == 'Name' and name!='':
+        # print(name)
+        if name in odbData.steps.keys():
+            SelectCell=[(name, fcell),]
+        else:
+            raise ValueError(u"没有名为{}的分析步，无法增补".format(name).encode('GB18030'))
+        # SelectCell = [(step, fcell) for step in steps if name in step]
+        # print(SelectCell)
     elif SSb=='last':
         SelectCell = [(odbData.activeFrames[-1][0], fcell)]
     elif SSb == 'mod and last':
@@ -742,7 +751,11 @@ def ActiveStepsFrames(SSb='all',SFb='all',bstep=0,cstep=1,astep=0,f_str='0:-1',n
             for i, step in enumerate(steps, 1)  # python2.7 start参数写法
             if i % cstep == 0
         ]
-        SelectCell.append((odbData.activeFrames[-1][0], fcell))
+        try:
+            # SelectCell.append((odbData.activeFrames[-1][0], fcell))
+            SelectCell.append((odbData.steps.keys()[-1], fcell))
+        except:
+            SelectCell.append((odbData.activeFrames[-1][0], fcell))
     odbData.setValues(activeFrames=tuple(SelectCell))
 
 
