@@ -176,7 +176,7 @@ thisDir = os.path.dirname(thisPath)
 
 toolset = getAFXApp().getAFXMainWindow().getPluginToolset()
 toolset.registerGuiMenuButton(
-    buttonText='STPM_test1033', 
+    buttonText='InelasticAnalsis|model', 
     object=STPM_test1033_plugin(toolset),
     messageId=AFXMode.ID_ACTIVATE,
     icon=None,
