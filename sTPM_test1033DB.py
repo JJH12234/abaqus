@@ -506,7 +506,7 @@ class STPM_test1033DB(AFXDataDialog):
         table.showHorizontalGrid(True)
         table.showVerticalGrid(True)
 
-         if self.HTCList:
+        if self.HTCList:
             try:
                 for i in range(0, len(self.HTCList)):
                     table.setItemText(i + 1, 1, str(self.HTCList[i]))
