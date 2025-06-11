@@ -13,7 +13,7 @@ C
       DIMENSION ARRAY(15), JARRAY(15)
       CHARACTER*3 FLGRAY(15)
       CHARACTER*6 :: FLAG
-      REAL*8 T1,T2,T0
+      REAL*8 T1,T2,T0,CTEMP
       REAL*8 W
       REAL*8 :: timescale=1.0D0/3600.0D0 !模型time单位*scale→本构time单位
 C 输入蠕变参数!蠕变本构方程参数（以q0为形式，避免E-27）
@@ -24,15 +24,16 @@ C     REAL*8, DIMENSION(7, 7) :: CreepParaList
       REAL*8, DIMENSION(7) :: CreepPara!传入蠕变参数
       DECRA=0.0D0 !初始化
       DECRAT=0.0D0 !初始化
-          rowIndex1=count(CreepCEpara_q0(1,:).LE.TEMP)
-          IF (TEMP.LT.CreepCEpara_q0(1,1)) THEN !温度小于最小
+      CTEMP=TEMP-DTEMP/2d0 !分析步平均温度
+          rowIndex1=count(CreepCEpara_q0(1,:).LE.CTEMP)
+          IF (CTEMP.LT.CreepCEpara_q0(1,1)) THEN !温度小于最小
               DECRA=0.0D0
-          ELSEIF (COUNT(CreepCEpara_q0(1,:).eq.TEMP).EQ.1.OR.
-     1     COUNT(CreepCEpara_q0(1,:).eq.TEMP).EQ.2) then !温度恰好等于
+          ELSEIF (COUNT(CreepCEpara_q0(1,:).eq.CTEMP).EQ.1.OR.
+     1     COUNT(CreepCEpara_q0(1,:).eq.CTEMP).EQ.2) then !温度恰好等于
               CreepPara=CreepCEpara_q0(:,rowIndex1)
               Call {{CreepCE_X}}(DECRA,EC,QTILD,TIME,DTIME,LEXIMP,
      1            CreepPara,timescale)
-          ELSEIF (TEMP.GT.maxval(CreepCEpara_q0(1,:))) THEN !温度大于最后
+          ELSEIF (CTEMP.GT.maxval(CreepCEpara_q0(1,:))) THEN !温度大于最后
               CreepPara=reshape(CreepCEpara_q0(:,maxloc(CreepCEpara_q0(1,:))),(/7/))
               Call {{CreepCE_X}}(DECRA,EC,QTILD,TIME,DTIME,LEXIMP,
      1            CreepPara,timescale)
@@ -47,7 +48,7 @@ C     REAL*8, DIMENSION(7, 7) :: CreepParaList
               !对DECRA(1,5)使用1/T插值 应力插值结果根据温度插值
               T1=CreepCEpara_q0(1,rowIndex1)+273.15D0
               T2=CreepCEpara_q0(1,rowIndex2)+273.15D0
-              T0=TEMP+273.15D0
+              T0=CTEMP+273.15D0
               W=(1.0D0/T0-1.0D0/T1)/(1.0D0/T2-1.0D0/T1)
               DECRA(1)=DECRAT(1)**W*DECRA(1)**(1.0D0-W)
               DECRA(5)=DECRAT(5)**W*DECRA(5)**(1.0D0-W)
