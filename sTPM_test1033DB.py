@@ -241,10 +241,10 @@ class STPM_test1033DB(AFXDataDialog):
         VAligner_9 = AFXVerticalAligner(p=HFrame_31, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0)
         spinner1 = AFXSpinner(VAligner_9, 6, 'UVARM vars', form.keyword61Kw, 0)
-        spinner1.setRange(1, 10)
+        spinner1.setRange(0, 100)
         spinner1.setIncrement(1)
         spinner2 = AFXSpinner(VAligner_9, 6, 'SDV vars', form.keyword62Kw, 0)
-        spinner2.setRange(1, 10)
+        spinner2.setRange(0, 9999)
         spinner2.setIncrement(1)
         import1 = FXButton(p=VFrame_16, text='import', ic=None, tgt=self,
                                      sel=self.ID_CLICKED_import1,
