@@ -901,7 +901,7 @@ def calculate_lines(x0, y0):
 def generate_user_RepresentativeStress(user_CFInterFortran,user_EquivS):
     method = user_EquivS[1]
     if method == "RCCmethod(Hayhurst)":
-        SF = user_EquivS[2][0]
+        SF = user_EquivS[2][0][0]
         updated_content1 = RCC(SF,user_CFInterFortran)
     else:
         SF = user_EquivS[2][0][0]
