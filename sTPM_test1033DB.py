@@ -1953,7 +1953,7 @@ class MaterialDataDialog(AFXDialog):
                 for row in range(0, num_rows):  
                     value = self.table.getItemText(row, 0)
                     if value.strip():
-                        new_data.append(self._convert_value(value))
+                        new_data.append([self._convert_value(value)])
             else:  # 二维列表
                 for row in range(0, num_rows):  
                     row_data = []
