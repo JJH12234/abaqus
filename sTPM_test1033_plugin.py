@@ -101,7 +101,7 @@ class STPM_test1033_plugin(AFXForm):
         self.keyword92Kw = AFXStringKeyword(self.cmd, 'keyword92', True, '')
         self.keyword80Kw = AFXStringKeyword(self.cmd, 'keyword80', True, 'G5,Steady,G6,Steady,G13,Steady,G9')
         self.keyword93Kw = AFXStringKeyword(self.cmd, 'keyword93', True, '')
-        self.keyword81Kw = AFXStringKeyword(self.cmd, 'keyword81', True, '15')
+        self.keyword81Kw = AFXIntKeyword(self.cmd, 'keyword77', True, 15)
         self.keyword78Kw = AFXTableKeyword(self.cmd, 'keyword78', True)
         self.keyword78Kw.setColumnType(0, AFXTABLE_TYPE_STRING)
         self.keyword78Kw.setColumnType(1, AFXTABLE_TYPE_STRING)
@@ -176,7 +176,7 @@ thisDir = os.path.dirname(thisPath)
 
 toolset = getAFXApp().getAFXMainWindow().getPluginToolset()
 toolset.registerGuiMenuButton(
-    buttonText='STPM_test1033', 
+    buttonText='InelasticAnalsis|model', 
     object=STPM_test1033_plugin(toolset),
     messageId=AFXMode.ID_ACTIVATE,
     icon=None,

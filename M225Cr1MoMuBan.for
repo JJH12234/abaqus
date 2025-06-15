@@ -8,7 +8,7 @@ C
 C
       DIMENSION DECRA(5),DESWA(5),STATEV(*),PREDEF(*),DPRED(*),
      1TIME(3),EC(2),ESW(2),COORDS(*)
-      REAL*8, DIMENSION(5) :: DECRAT,DECRAT1,DECRAT2!插值用应变变量 对标DECRA
+      REAL*8, DIMENSION(5) :: DECRAT,DECRA1,DECRA2!插值用应变变量 对标DECRA
       INTEGER :: rowIndex1, rowIndex2
       DIMENSION ARRAY(15), JARRAY(15)
       CHARACTER*3 FLGRAY(15)
@@ -33,6 +33,8 @@ C     REAL*8, DIMENSION(7, 7) :: CreepParaList
       REAL*8, DIMENSION(7) :: CreepPara!传入蠕变参数
       DECRA=0.0D0 !初始化
       DECRAT=0.0D0 !初始化
+      DECRA1=0.0D0 !初始化
+      DECRA2=0.0D0 !初始化
       T_lower = CreepCEpara_q0(1,1)  ! 临界温度
       T_avg = TEMP - DTEMP / 2.0D0
       idx_min=minloc(CreepCEpara_q0(1,:))
