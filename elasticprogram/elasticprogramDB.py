@@ -10,9 +10,9 @@ from abaqusGui import FXWindow
 from abaqusGui import AFXMessageDialog
 from abaqusGui import sendCommand 
 from abaqusGui import getAFXApp
-# from traceback import format_exc
 thisPath = os.path.abspath(__file__)
 thisDir = os.path.dirname(thisPath)
+
 def get_current_viewport():
     return session.viewports[session.currentViewportName]
 
@@ -300,14 +300,14 @@ class SoftwareprogramDB(AFXDataDialog):
         self.table_points.setColumnListId(0, listId_pts)
         
 
-        # -----------------------  Paths 表：新增下拉桄1�7 ------------------------
+        # -----------------------  Paths 表：新增下拉框 ------------------------
 
         # 1) 创建下拉框列表并填充
         listId_paths = self.table_paths.addList()
         for inst in instance_list:
             self.table_paths.appendListItem(listId_paths, inst)
 
-        # 2) 把第 1 刄1�7 (索引 1) 改为下拉框并绑定
+        # 2) 把第 1 行 (索引 1) 改为下拉框并绑定
         self.table_paths.setColumnType(1, AFXTable.LIST)
         self.table_paths.setColumnListId(1, listId_paths)
         self.table_paths.setColumnWidth(1, 200)
@@ -334,12 +334,7 @@ class SoftwareprogramDB(AFXDataDialog):
 
         # Update widgets based on analysis type
         self.updateWidgetsByAnalyseType()
-# data = []
-# for pathname in session.paths.keys():
-#   p= session.paths[pathname]
-#   if p.type == NODE_LIST: #�˴�NODE_LISTΪabaqus����
-#     for row in p.expression:
-#       data.append( (p.name, row[0], str(row[1]).replace('(','').replace(')',''), False) )
+
     # ==== 4) 事件回调（加到类的其他回调之后即可） ====
     def get_current_viewport():
         return session.viewports[session.currentViewportName]
@@ -366,9 +361,9 @@ class SoftwareprogramDB(AFXDataDialog):
             "    traceback.print_exc()\n"
         ) % script.replace('\\', '\\\\')      # 双反斜杠防止转义
 
-        sendCommand(cmd)                      # GUI ↄ1�7 kernel 立即执行 :contentReference[oaicite:3]{index=3}
+        sendCommand(cmd)                      
         getAFXApp().getAFXMainWindow().writeToMessageArea(
-            "【Tinker】脚本命令已发��，请在 Kernel Command 视图查看运行日志\n"
+            "【Tinker】脚本命令已发松，请在 Kernel Command 视图查看运行日志\n"
         )
         return 1
 
@@ -377,118 +372,28 @@ class SoftwareprogramDB(AFXDataDialog):
     # ====================  dialog  ====================
     # ------------------------------------------------------------
     def _wipe_table_and_kw(self, table, tableKw):
-        """��ￄ1�7 AFXTable����ͬ������ￄ1�7 Keyword"""
-        # �Ȱѹؼ�������ȫ���ÿ�
+        """AFXTable Keyword修改"""
         rows, cols = table.getNumRows(), table.getNumColumns()
         for r in range(rows):
             for c in range(cols):
-                tableKw.setValue(r, c, '')        # �����������С��С�����
+                tableKw.setValue(r, c, '')        
 
-        # ��ɾ UI �У����������� 0��
         if rows > 1:
             table.deleteRows(1, rows - 1)
 
         table.update()
     def onAnyTableChanged(self, sender, sel, ptr):
-        # �����������Ķ�ʱ AFXTableKeyword �Żᷢ��Ϣ
         self.processTables()
         return 1
 
-    # def _msg2str(msg, enc='utf-8'):
-    #     """Return a Python-2 *str* (bytes); accept unicode or str."""
-    #     if isinstance(msg, unicode):
-    #         return msg.encode(enc, 'replace')     # never raises
-    #     return str(msg)
-    # def _write(main_win, text):
-    #     main_win.writeToMessageArea(_msg2str(text))
 
-    # ------------------------------------------------------------
-    # ------------------------------------------------------------
-    # ------------------------------------------------------------
-    # def onApply(self, sender, sel, ptr):
-    #     try:
-    #         # �ȴ�����������
-    #         self.processTables()
-            
-    #         # ��ȡ�����������ַ���
-    #         cmd_str = self.form.cmd.getCommandString()
-    #         main_window = getAFXApp().getAFXMainWindow()
-    #         main_window.writeToMessageArea("Sending command: {}\n".format(cmd_str))
-            
-    #         # ��������ں�
-    #         sendCommand(cmd_str)
-    #     except Exception as e:
-    #         import traceback
-    #         traceback_str = traceback.format_exc()
-    #         getAFXApp().getAFXMainWindow().writeToMessageArea(
-    #             "Error in onApply: {}\n{}\n".format(str(e), traceback_str)
-    #         )
-    #     return 1
-
-    # def onOk(self, sender, sel, ptr):
-    #     try:
-    #         # �ȴ�����������
-    #         self.processTables()
-            
-    #         # ��ȡ�����������ַ���
-    #         cmd_str = self.form.cmd.getCommandString()
-    #         main_window = getAFXApp().getAFXMainWindow()
-    #         main_window.writeToMessageArea("Sending command: {}\n".format(cmd_str))
-            
-    #         # ��������ں�
-    #         sendCommand(cmd_str)
-            
-    #         # �رնԻ���
-    #         self.handle(self, FXSEL(FXWindow.SEL_COMMAND, AFXDialog.ID_CLICKED_OK), None)
-    #     except Exception as e:
-    #         import traceback
-    #         traceback_str = traceback.format_exc()
-    #         getAFXApp().getAFXMainWindow().writeToMessageArea(
-    #             "Error in onOk: {}\n{}\n".format(str(e), traceback_str)
-    #         )
-    #     return 1
-
-
-    # ===== ���ߺ��� =====
+    # ===== 转换编码=====
     def _is_int(s):
 
         return s.lstrip('+-').isdigit()
 
-    def _to_ascii(msg):
-
-        if isinstance(msg, unicode):
-            return msg.encode('ascii', 'replace')
-        try:
-            # Դ�ļ�����Ϊ UTF-8 ʱ���ȳ��԰� UTF-8 ����
-            u = msg.decode('utf-8')
-        except UnicodeDecodeError:
-            # ��ϵͳĬ�ϱ������ԣ���ʧ�ܾ�ֱ���滻
-            try:
-                u = msg.decode(sys.getdefaultencoding())
-            except UnicodeDecodeError:
-                u = unicode(msg, errors='replace')
-        return u.encode('ascii', 'replace')
-
-    # # ====== ����ť�ص� ======
-    # def onOk(self, sender, sel, ptr):
-    #     # 先让对话框把 keyword 写回 command
-    #     self.form.verifyKeywordValues()                 # 写值 + 基本校验
-    #     cmd_txt = self.form.cmd.getCommandString()
-
-    #     if not cmd_txt.strip():                         # 为空直接报错给用户
-    #         getAFXApp().getAFXMainWindow().writeToMessageArea(
-    #             '[ERROR] Command string is empty – 检查输入关键字.\n')
-    #         return 0
-
-    #     sendCommand(cmd_txt)                            # 顺序 1
-
-    #     if self.form.analysetypeKw.getValue() == 'Brittle failure':
-    #         self._run_brittle_assess()                  # 顺序 2
-
-    #     return AFXDataDialog.onOk(self, sender, sel, ptr)
 
 
-    # ====== ���ģ���ȡ����֤���� ======
     def _to_ascii(msg):
         if isinstance(msg, unicode):
             return msg.encode('ascii', 'replace')
@@ -509,7 +414,7 @@ class SoftwareprogramDB(AFXDataDialog):
         wr = lambda t: getAFXApp().getAFXMainWindow().writeToMessageArea(_to_ascii(t))
 
         try:
-            # ------------------------------------------------ Points �� ------------------------------------------------
+            # ------------------------------------------------ Points  ------------------------------------------------
             pts_rows = []
             for r in xrange(1, self.table_points.getNumRows()):
                 inst = self.table_points.getItemText(r, 0).strip()
@@ -517,10 +422,10 @@ class SoftwareprogramDB(AFXDataDialog):
                 weld = 1 if str(self.table_points.getItemValue(r, 2)).lower() in ('1', 'true') else 0
                 if inst and node:
                     pts_rows.append((inst, node, weld))
-                elif weld:  # ֻ���� weld ��û����
+                elif weld:  # ֻ是否 weld 判断
                     wr("[WARN] PTS row{} skipped: \n".format(r))
 
-            # �ؼ��ֳߴ� = ��������
+
             kw1 = self.form.tabledata1Kw
             # kw1.setRowSize(len(pts_rows))
             # kw1.setColumnSize(3)
@@ -561,17 +466,9 @@ class SoftwareprogramDB(AFXDataDialog):
 
     def show(self):
 
-        AFXDataDialog.show(self)               # ��ʽ���û�����
+        AFXDataDialog.show(self)               
         self.updateWidgetsByAnalyseType()
-        # try:
-            # # �� Node/Weld ��
-            # self._wipe_table_and_kw(self.table_points, self.form.tabledata1Kw)
-            # # �� Paths ��
-            # self._wipe_table_and_kw(self.table_paths,  self.form.tabledata2Kw)
 
-        # except Exception as e:
-            # getAFXApp().getAFXMainWindow().writeToMessageArea(
-                # '[SoftwareprogramDB.show] ��ձ���ʧ�ￄ1�7: %s\n' % e)
         data = []
         for pathname in session.paths.keys():
             p = session.paths[pathname]
@@ -587,7 +484,7 @@ class SoftwareprogramDB(AFXDataDialog):
             # Append items to the "Instance Name" combo box
             self.table_paths.setItemValue(row_index+1, 1, instance_name)
             self.table_paths.setItemText(row_index+1, 2, node_labels)
-        # ���²���
+        # 强制刷新
         self.getOwner().recalc()
         self.getOwner().repaint()
         
@@ -596,19 +493,20 @@ class SoftwareprogramDB(AFXDataDialog):
         main_window = getAFXApp().getAFXMainWindow()
         main_window.writeToMessageArea("--- onAnalyseTypeChanged\n")
         
-        # ��������¼��Ŀؼ���τ1�7
+        # 分析类型改变
         if sender is not None:
-           unicode_message = u"触发事件控件: " + sender.getName()
-           main_window.writeToMessageArea(unicode_message.encode('gbk') + "\n")
+            msg = u"触发事件控件: {}".format(sender.getName())
+            main_window.writeToMessageArea(msg.encode('GB18030') + "\n")
         else:
-            main_window.writeToMessageArea("触发事件控件: 未知\n")
+            main_window.writeToMessageArea(
+                u"触发事件控件: 未知".encode('GB18030') + "\n"
+    )
         
-        # ��ȡ��ǰѡ��ֵ
         current_index = self.ComboBox_2.getCurrentItem()
         current_text = self.ComboBox_2.getItemText(current_index)
-        main_window.writeToMessageArea("当前选项文本: %s\n" % current_text)
+        main_window.writeToMessageArea(u"当前选项文本: {}\n".format(current_text).encode('GB18030'))
         
-        # ���ø��·���
+        # 更新控件
         self.updateWidgetsByAnalyseType()
         return 1
 
@@ -618,7 +516,9 @@ class SoftwareprogramDB(AFXDataDialog):
         
         main_window = getAFXApp().getAFXMainWindow()
         main_window.writeToMessageArea("--- updateWidgetsByAnalyseType  ---\n")
-        main_window.writeToMessageArea("当前文本是: %s\n" % current_text)
+        main_window.writeToMessageArea(
+    u"当前文本是: {}\n".format(current_text).encode('GB18030')
+)
         all_widgets = [
         self.ComboBox_2, self.ComboBox_8, self.GroupBox_9, self.ComboBox_6,
         self.ComboBox_7, self.Textfield_CF, self.VAligner_3, self.spinner_creep,
@@ -630,7 +530,7 @@ class SoftwareprogramDB(AFXDataDialog):
     ]
         for widget in all_widgets:
             widget.enable()
-        # ���¿ؼ�״̬
+        # 非弹性应变
         if current_text == 'Inelastic strain':
             main_window.writeToMessageArea(" Brittle Settings...\n")
             self.ComboBox_8.disable()
@@ -673,16 +573,18 @@ class SoftwareprogramDB(AFXDataDialog):
             self.button_points.disable()
             self.table_points.disable()
             self.tinkerBtn.enable()
-        # ǿ��ˢ�½���
+
         self.getOwner().recalc()
         self.getOwner().repaint()
         
     def onCFICriterionChanged(self, sender, sel, ptr):
-        # ��ȡ�����ք1�7
+
         main_window = getAFXApp().getAFXMainWindow()
         input_value = self.Textfield_CF.getText()
-        main_window.writeToMessageArea("��ǰֵ: %s\n" % input_value)
-        # ʹ���������ʽ����ʽ�Ƿ�΄1�7 'float,float' ��ʽ
+        main_window.writeToMessageArea(
+    u"输入值是 {}\n".format(input_value).encode('GB18030')
+)
+        # 'float,float' 
         if not self.isValidCFICriterion(input_value):
             self.showErrorMessage(" C-F Interaction Criterion ( 0.3, 0.3)!")
         return 1
@@ -690,11 +592,11 @@ class SoftwareprogramDB(AFXDataDialog):
         """
         'float,float' 
         """
-        pattern = r"^[-+]?\d*\.\d+,\s*[-+]?\d*\.\d+$"  # ƥ�� float,float ��ʽ
+        pattern = r"^[-+]?\d*\.\d+,\s*[-+]?\d*\.\d+$"  #  float,float 
         return bool(re.match(pattern, input_value))
     def showErrorMessage(self, title, message):
         """
-        ��ʾ������ʾ��
+        输出信息到终端
         """
         main_window = getAFXApp().getAFXMainWindow()
         showAFXErrorDialog(main_window, 'An invalid value was supplied.')
@@ -703,17 +605,20 @@ class SoftwareprogramDB(AFXDataDialog):
         main_window = getAFXApp().getAFXMainWindow()
         main_window.writeToMessageArea("--- onPathTypeChanged ---\n")
         
-        # ��������¼��Ŀؼ���τ1�7
+        # 类型选择改变了
         if sender is not None:
             main_window.writeToMessageArea("Path type changed: %s\n" % sender.getName())
         else:
-            main_window.writeToMessageArea("错误: δ֪\n")
+            main_window.writeToMessageArea(
+            u"错误: 未知控件\n".encode('GB18030')
+        )
         
-        # ��ȡ��ǰѡ��ֵ
         current_index = self.ComboBox_4.getCurrentItem()
         current_text = self.ComboBox_4.getItemText(current_index)
-        main_window.writeToMessageArea("现在的类型是: %s\n" % current_text)       
-        # ���ø��·���
+        main_window.writeToMessageArea(
+        u"现在的类型是: {}\n".format(current_text).encode('GB18030')
+    )    
+        # 更新控件状态
         self.updateWidgetsByPathType()
         return 1
     def updateWidgetsByPathType(self):
@@ -722,13 +627,15 @@ class SoftwareprogramDB(AFXDataDialog):
         
         main_window = getAFXApp().getAFXMainWindow()
         main_window.writeToMessageArea("--- updateWidgetsByPathType---\n")
-        main_window.writeToMessageArea("现在的类型是: %s\n" % current_text)
+        main_window.writeToMessageArea(
+        u"现在的类型是: {}\n".format(current_text).encode('GB18030')
+    )
         self.spinner_intervals.enable()
-        # ���¿ؼ�״̬
+        # 插值方式改变
         if current_text == 'PATH_POINTS':
             main_window.writeToMessageArea(" intervals...\n")
             self.spinner_intervals.disable()
-        # ǿ��ˢ�½���
+        # 强制刷新
         self.getOwner().recalc()
         self.getOwner().repaint()
 
@@ -736,17 +643,22 @@ class SoftwareprogramDB(AFXDataDialog):
             main_window = getAFXApp().getAFXMainWindow()
             main_window.writeToMessageArea("--- onExtrapolateTypeChanged  ---\n")
             
-            # ��������¼��Ŀؼ���τ1�7
+            # 外推类型改变
             if sender is not None:
-                main_window.writeToMessageArea("�����¼��Ŀؼ�: %s\n" % sender.getName())
+                main_window.writeToMessageArea(
+            u"外推类型改变: {}\n".format(sender.getName()).encode('GB18030')
+        )
             else:
-                main_window.writeToMessageArea("�����¼��Ŀؼ�: δ֪\n")
+                main_window.writeToMessageArea(
+            u"出现错误: 未知控件\n".encode('GB18030')
+        )
             
-            # ��ȡ��ǰѡ��ֵ
+            # 获取当前类型
             current_index = self.ComboBox_3.getCurrentItem()
             current_text = self.ComboBox_3.getItemText(current_index)
-            main_window.writeToMessageArea("��ǰѡ���ı�: %s\n" % current_text)       
-            # ���ø��·���
+            main_window.writeToMessageArea(
+        u"当前类型是: {}\n".format(current_text).encode('GB18030')
+    )       
             self.updateWidgetsByExtrapolateType()
             return 1
     def updateWidgetsByExtrapolateType(self):
@@ -754,13 +666,18 @@ class SoftwareprogramDB(AFXDataDialog):
         current_text = self.ComboBox_3.getItemText(current_index)
         
         main_window = getAFXApp().getAFXMainWindow()
-        main_window.writeToMessageArea("--- updateWidgetsByPathType ���������� ---\n")
-        main_window.writeToMessageArea("��ǰ��������: %s\n" % current_text)
+        main_window.writeToMessageArea(
+        "--- updateWidgetsByExtrapolateType ---\n"
+    )
+        main_window.writeToMessageArea(
+        u"当前外推类型: {}\n".format(current_text).encode('GB18030')
+    )
         self.spinner_extrao.enable()
         self.Textfield_step.enable()
-        # ���¿ؼ�״̬
         if current_text == 'None':
-            main_window.writeToMessageArea("ȫ������ ...\n")
+            main_window.writeToMessageArea(
+            u"选择 None → 关闭所有外推控件\n".encode('GB18030')
+        )
             self.spinner_extrao.disable()
             self.Textfield_step.disable()
         if current_text == 'Direct':
@@ -768,20 +685,20 @@ class SoftwareprogramDB(AFXDataDialog):
         if current_text == 'Add':
             self.spinner_extrao.enable()
             self.Textfield_step.enable()
-        # ǿ��ˢ�½���
         self.getOwner().recalc()
         self.getOwner().repaint()
     
     def updatetable2kw(self, sender, sel, ptr):
         main_window = getAFXApp().getAFXMainWindow()
-        main_window.writeToMessageArea("--- updatetable2kw ���������� ---\n")
+        main_window.writeToMessageArea(
+        u"--- updatetable2kw 开始检查 ---\n".encode('GB18030')
+    )
 
         table = self.table_paths
         table_kw = self.form.tabledata2Kw
         rows = table.getNumRows()
         cols = table.getNumColumns()
 
-        # ����ӳ��
         type_map = {
             AFXTABLE_TYPE_STRING: 'STRING',
             AFXTABLE_TYPE_INT: 'INT',
@@ -789,13 +706,17 @@ class SoftwareprogramDB(AFXDataDialog):
             AFXTABLE_TYPE_BOOL: 'BOOL',
         }
 
-        for i in range(1, rows):  # �ӵ�1�п�ʼ����������
-            main_window.writeToMessageArea("�� %d ��:\n" % i)
+        for i in range(1, rows):  
+            main_window.writeToMessageArea(
+            u"第 {} 行:\n".format(i).encode('GB18030')
+        )
             for j in range(cols):
                 val = table.getItemText(i, j)
                 col_type = table_kw.getColumnType(j)
                 typename = type_map.get(col_type, 'UNKNOWN')
-                main_window.writeToMessageArea("  �� %d ��: ֵ = [%s], ���� = %s\n" % (j, val, typename))
+                main_window.writeToMessageArea(
+                u"  列 {}: 值=[{}], 类型={}\n".format(j, val, typename).encode('GB18030')
+            )
         return 1
 
 ###########################################################################
