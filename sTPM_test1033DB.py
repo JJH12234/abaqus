@@ -37,7 +37,7 @@ class STPM_test1033DB(AFXDataDialog):
     def __init__(self, form):
 
         # Construct the base class.
-
+        mw = getAFXApp().getAFXMainWindow()
         AFXDataDialog.__init__(self, form, 'STPM_GB_Before',)
                                # self.OK | self.CANCEL, )
         self.materials_data = {}
@@ -241,10 +241,10 @@ class STPM_test1033DB(AFXDataDialog):
         VAligner_9 = AFXVerticalAligner(p=HFrame_31, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0)
         spinner1 = AFXSpinner(VAligner_9, 6, 'UVARM vars', form.keyword61Kw, 0)
-        spinner1.setRange(1, 10)
+        spinner1.setRange(0, 100)
         spinner1.setIncrement(1)
         spinner2 = AFXSpinner(VAligner_9, 6, 'SDV vars', form.keyword62Kw, 0)
-        spinner2.setRange(1, 10)
+        spinner2.setRange(0, 9999)
         spinner2.setIncrement(1)
         import1 = FXButton(p=VFrame_16, text='import', ic=None, tgt=self,
                                      sel=self.ID_CLICKED_import1,
@@ -506,7 +506,7 @@ class STPM_test1033DB(AFXDataDialog):
         table.showHorizontalGrid(True)
         table.showVerticalGrid(True)
 
-         if self.HTCList:
+        if self.HTCList:
             try:
                 for i in range(0, len(self.HTCList)):
                     table.setItemText(i + 1, 1, str(self.HTCList[i]))
@@ -1027,7 +1027,7 @@ class STPM_test1033DB(AFXDataDialog):
             sendCommand(cmds)
             #fortran_data = self.pre_materialImport(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum))
             # 导入成功后显示消息
-            mw.writeToMessageArea("Material '" + str(aimMaterialName) + "' imported successfully")
+            mw.writeToMessageArea(u"Material {} imported successfully".format(aimMaterialName).encode('GB18030'))
             # 更新材料下拉框
             self.updateComboBox_15Materials()
             # except Exception as e:
@@ -1182,313 +1182,6 @@ class STPM_test1033DB(AFXDataDialog):
             return 1
         else:
             return 0
-
-    def pre_materialImport(self, jsondata, aimMaterialName, UVARMnum, SDVnum):
-        """导入材料数据到当前模型
-        
-        Args:
-            jsondata (dict): 材料属性数据字典
-            aimMaterialName (str): 目标材料名称
-            UVARMnum (int): UVARM变量数量
-            SDVnum (int): SDV变量数量
-            
-        Returns:
-            dict: Fortran相关数据
-        """
-        # 验证参数
-        if not isinstance(jsondata, dict):
-            raise ValueError(u"JSON数据必须是字典格式")
-        
-        if not isinstance(aimMaterialName, str):
-            raise ValueError(u"材料名称必须是字符串类型")
-            
-        if not aimMaterialName.strip():
-            raise ValueError(u"材料名称不能为空")
-            
-        # 获取当前模型
-        m = self.get_current_model()
-        if not m:
-            raise RuntimeError(u"无法获取当前模型")
-            
-        # 创建或获取材料
-        try:
-            if aimMaterialName in m.materials:
-                mm = m.materials[aimMaterialName]
-            else:
-                mm = m.Material(name=aimMaterialName)
-        except Exception as e:
-            raise RuntimeError(u"创建材料失败: " + str(e))
-            
-        # 分离用户自定义数据和标准材料数据
-        filtered_data = {}
-        fortran_data = {}
-        for k, v in jsondata.items():
-            if k.startswith("user_"):
-                fortran_data[k] = v
-            else:
-                filtered_data[k] = v
-                
-        # 处理标准材料数据
-        try:
-            data = self.process_dict(filtered_data)
-            for properrow in data:
-                self.addproperty(mm, properrow)
-        except Exception as e:
-            raise RuntimeError(u"处理材料属性失败: " + str(e))
-            
-        # 处理UVARM
-        try:
-            if UVARMnum > 0:
-                mm.UserOutputVariables(n=UVARMnum)
-            else:
-                if hasattr(mm, 'userOutputVariables'):
-                    del mm.userOutputVariables
-        except Exception as e:
-            raise RuntimeError(u"设置UVARM失败: " + str(e))
-            
-        # 处理SDV
-        try:
-            if SDVnum > 0:
-                mm.UserDefinedField()
-                mm.Depvar(n=SDVnum)
-            else:
-                if hasattr(mm, 'depvar'):
-                    del mm.depvar
-                if hasattr(mm, 'userDefinedField'):
-                    del mm.userDefinedField
-        except Exception as e:
-            raise RuntimeError(u"设置SDV失败: " + str(e))
-            
-        return fortran_data
-
-
-           
-    def process_dict(self, d, path=None):
-        if path is None:
-            path = []
-        result = []
-        for key, value in d.items():
-            if isinstance(value, dict):
-                result.extend(self.process_dict(value, path + [key]))
-            else:
-                result.append(path + [key, value])
-        return result
-
-    def tDepCheck(self, property_name, property_type, property_data):
-        # 定义属性与期望列数的映射
-        property_columns = {
-            'Density': {'Uniform': 1},
-            'Elastic': {'Isotropic': 2},
-            'Conductivity': {'Isotropic': 1},
-            'Specific Heat': {'*': 1},
-            'Expansion': {'Isotropic': 1},
-            'Plastic': {'Isotropic': 2, 'User': 1},
-            'Creep': {
-                'Strain-Harding': 3,
-                'Time-Harding': 3,
-                'Power': 4,
-                'Time_Power': 4,
-                'User': 0
-            },
-        }
-        # 获取传入数据的列数
-        if not property_data:
-            return OFF  # 无数据时默认关闭
-        # 获取实际数据列数
-        num_columns = len(property_data[0])
-        
-        # 获取期望列数
-        columns_spec = property_columns.get(property_name)
-        if columns_spec is None:
-            return ON  # 属性不在映射中，默认开启
-        
-        # 解析期望列数
-        if isinstance(columns_spec, dict):
-            # 先检查具体类型
-            expected_num = columns_spec.get(property_type)
-            # 如果具体类型不存在，检查通配符
-            if expected_num is None and '*' in columns_spec:
-                expected_num = columns_spec['*']
-        else:
-            # 直接数字类型规格
-            expected_num = columns_spec
-        
-        # 如果未找到具体类型或通配符，默认开启
-        if expected_num is None:
-            return ON
-        
-        # 判断列数是否匹配（实际列数 = 期望列数 + 1）
-        return ON if num_columns == expected_num + 1 else OFF
-
-    def addproperty(self, mm, datarow):
-        property_name = datarow[0]
-        property_type = datarow[1]
-        table_data = datarow[-1]
-        tDCflag = self.tDepCheck(property_name, property_type, table_data)
-        try:
-            tryarg=globals()[property_type.upper().replace(' ', '')]
-        except (KeyError , AttributeError):
-            tryarg=NONE
-            print("{pt} is not a abaqusConstants".format(pt=str(property_type).upper().replace(' ', '')))
-            print("the type of {pn} is set as default".format(pn=property_name))
-        handler_map = {
-            # Density处理
-            ('Density', 'Uniform'): {
-                'method': 'Density',
-                'args': {
-                    'distributionType': UNIFORM,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Density', '*'): {
-                'method': 'Density',
-                'args': {
-                    'distributionType': DISCRETE_FIELD,
-                    'fieldName': property_type,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            # Creep处理
-            ('Creep', 'User_defined'): {
-                'method': 'Creep',
-                'args': {'law': USER, 'table': ()}
-            },
-            ('Creep', 'Power'): {
-                'method': 'Creep',
-                'args': {
-                    'law': POWER_LAW,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Creep', 'Time_Power'): {
-                'method': 'Creep',
-                'args': {
-                    'law': TIME_POWER_LAW,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Creep', 'Time-Harding'): {
-                'method': 'Creep',
-                'args': {
-                    'law': TIME,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Creep', 'Strain-Harding'): {
-                'method': 'Creep',
-                'args': {
-                    'law': STRAIN,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Creep', '*'): {
-                'method': 'Creep',
-                'args': {
-                    'law': tryarg,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            # Plastic处理
-            ('Plastic', '*'): {
-                'method': 'Plastic',
-                'args': {
-                    'hardening': tryarg,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            # Specific Heat处理
-            ('Specific Heat', '*'): {
-                'method': 'SpecificHeat',
-                'args': {
-                    'law': tryarg,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            # 通用类型处理（Elastic, Expansion, Conductivity）
-            ('Elastic', '*'): {
-                'method': property_name,
-                'args': {
-                    'type':  tryarg,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Expansion', '*'): {
-                'method': property_name,
-                'args': {
-                    'type':  tryarg,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('Conductivity', '*'): {
-                'method': property_name,
-                'args': {
-                    'type':  tryarg,
-                    'table': table_data,
-                    'temperatureDependency': tDCflag
-                }
-            },
-            ('*', '*'): {
-                'method': property_name.replace(' ', ''),
-                'args': OrderedDict([
-                    ('type',  tryarg),
-                    ('table', table_data),
-                    ('temperatureDependency', tDCflag)
-                ])
-            }
-        }
-        
-        # 查找处理程序
-        handler = None
-        specific_key = (property_name, property_type)
-        wildcard_key = (property_name, '*')
-        any_key = ('*', '*')
-        
-        if specific_key in handler_map:
-            handler = handler_map[specific_key]
-        elif wildcard_key in handler_map:
-            handler = handler_map[wildcard_key]
-        
-        # 如果未找到处理程序，抛出异常
-        if not handler:
-            #raise ValueError(f"No handler for {property_name}/{property_type}")
-            print("No handler for {property_name}/{property_type}".format(property_name=property_name,property_type=property_type))
-            handler = handler_map[any_key]
-            method = getattr(mm, handler['method'])
-            args_dict = handler['args']
-            if tryarg==NONE:
-                del method_args['type']
-                method(**args_dict)
-            else:
-                if args_dict:
-                    # 提取第一个参数的值和剩余参数
-                    keys = list(args_dict.keys())
-                    first_value = args_dict[keys[0]]
-                    remaining_args = {k: args_dict[k] for k in keys[1:]}
-                    # 调用时第一个参数作为第一个位置的参数传递
-                    method(first_value, **remaining_args)
-            return
-        # 获取方法并调用
-        method_name = handler['method']
-        method_args = handler['args']
-        # 检查 mm 对象是否有对应方法
-        if not hasattr(mm, method_name):
-            #raise AttributeError(f"Method '{method_name}' not found in mm object")
-            print("Method '{method_name}' not found in mm object".format(method_name=method_name))
-        if tryarg==NONE:
-            del method_args['type']
-        method = getattr(mm, method_name)
-        method(**method_args)
 
     def onSheetChanged(self, sender, sel, ptr, *args):
         # 获取当前选中的 Sheet 索引
@@ -1957,7 +1650,7 @@ class MaterialDataDialog(AFXDialog):
                 for row in range(0, num_rows):  
                     value = self.table.getItemText(row, 0)
                     if value.strip():
-                        new_data.append(self._convert_value(value))
+                        new_data.append((self._convert_value(value),))
             else:  # 二维列表
                 for row in range(0, num_rows):  
                     row_data = []
@@ -1971,7 +1664,7 @@ class MaterialDataDialog(AFXDialog):
             self.modified_data = new_data if new_data else None
             self.update_item_data(self.owner,self.item,self.modified_data)
             mw = getAFXApp().getAFXMainWindow()
-            mw.writeToMessageArea("保存成功{}".format(self.modified_data))
+            mw.writeToMessageArea(u"保存成功{}".format(self.modified_data).encode('GB18030'))
             # mw.writeToMessageArea("保存成功{}".format(self.owner.materials_data))
             self.hide()
         except Exception as e:

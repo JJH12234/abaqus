@@ -19,7 +19,7 @@ def get_current_model():
     modelname=session.sessionState[viewport]['modelName']
     if 'Model-0' in modelname:
         flag=getWarningReply(
-            'WARRNING: Edit Model-0 is not recommanded for user!\n YES-continue; No-copyNew;', (YES,NO,CANCEL))
+            u'警告： 不推荐用户自行编辑Model-0！\n YES以强制编辑; No建立副本并编辑;'.encode('GB18030'), (YES,NO,CANCEL))
     if flag==NO:
         newname=modelname.replace('Model-0','NewModel')
         if newname in mdb.models.keys():
@@ -40,7 +40,11 @@ def pre_materialImport_main(jsondata,aimMaterialName,UVARMnum,SDVnum):
     if aimMaterialName in m.materials:
         pass
     else:
-        m.Material(name=aimMaterialName) #新建
+        try:
+            m.Material(name=aimMaterialName) #新建
+        except AbaqusNameError as e:
+            raise Exception(u"{}不能作为材料名".format(aimMaterialName).encode('GB18030'))
+            return 0
     mm=m.materials[aimMaterialName]
     #filtered_data = {k: v for k, v in jsondata.items() if not k.startswith("user_")} #排除子程序用参数
     filtered_data = {}
@@ -69,7 +73,7 @@ def pre_materialImport_main(jsondata,aimMaterialName,UVARMnum,SDVnum):
     # print(process_dict(fortran_data))
     Creep,user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type = pre_materialImport(jsondata)
     fortran_name=aimMaterialName
-    # generate_Fortran(Creep,user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type,fortran_name)
+    generate_Fortran(Creep,user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type,fortran_name)
     return 
 # 定义一个递归函数来处理字典
 def process_dict(d, path=None):
@@ -137,8 +141,9 @@ def addproperty(mm, datarow):
         tryarg=globals()[property_type.upper().replace(' ', '')]
     except (KeyError , AttributeError):
         tryarg=NONE
-        print("{pt} is not a abaqusConstants".format(pt=str(property_type).upper().replace(' ', '')))
-        print("the type of {pn} is set as default".format(pn=property_name))
+        if property_name!='Creep': #蠕变属性下'law'参数的常量名比较奇怪
+            print(u"{pt}不是abaqusConstants".format(pt=str(property_type).encode('GB18030').upper().replace(' ', '')))
+            print(u"属性{pn}以默认值建立".format(pn=property_name).encode('GB18030'))
     handler_map = {
         # Density处理
         ('Density', 'Uniform'): {
@@ -270,7 +275,7 @@ def addproperty(mm, datarow):
     # 如果未找到处理程序，抛出异常
     if not handler:
         #raise ValueError(f"No handler for {property_name}/{property_type}")
-        print("No handler for {property_name}/{property_type}".format(property_name=property_name,property_type=property_type))
+        print(u"没有名为{property_name}/{property_type}的属性".format(property_name=property_name,property_type=property_type).encode('GB18030'))
         handler = handler_map[any_key]
         method = getattr(mm, handler['method'])
         args_dict = handler['args']
@@ -292,8 +297,8 @@ def addproperty(mm, datarow):
     # 检查 mm 对象是否有对应方法
     if not hasattr(mm, method_name):
         #raise AttributeError(f"Method '{method_name}' not found in mm object")
-        print("Method '{method_name}' not found in mm object".format(method_name=method_name))
-    if tryarg==NONE:
+        print(u"方法'{method_name}'在mm对象中没有找到".format(method_name=method_name).encode('GB18030'))
+    if tryarg==NONE and hasattr(method_args,'type'):
         del method_args['type']
     method = getattr(mm, method_name)
     method(**method_args)
@@ -314,7 +319,7 @@ def pre_materialImport(jsondata):
     user_CreepFatigueInteractionCriterion = []
     user_AnalysisType = []
     for i in range(0, len(flat_data)):
-        if flat_data[i][0] == "Creep":
+        if flat_data[i][0] == "Creep" and flat_data[i][1] == 'User_defined':
             Creep = flat_data[i]
         elif flat_data[i][0] == "user_RepresentativeStress":
             user_RepresentativeStress = flat_data[i]
@@ -342,22 +347,29 @@ def process_dict(d, path=None):
     return result
 
 # 生成fortran文件的总体思路
-def generate_Fortran(Creep,user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type,materialName):
+def generate_Fortran(Creep=[],user_EquivS=[],user_Tr=[],user_Nd=[], user_CFInter=[],user_Type=[],materialName=''):
     # 获取当前脚本所在目录的绝对路径
     template_name = "fortranBase/M225Cr1MoMuBan.for"
     # 构建模板文件的完整路径（假设模板文件与脚本同目录）
     template_path = os.path.join(script_dir, template_name)
     # 每一个模块接续处理
-    CreepFortran = generate_creep_subroutine(template_path,Creep)
-    user_TrFortran = generate_user_CreepRuptureLife(CreepFortran,user_Tr)
-    user_NdFortran = generate_user_FatigueLife(user_TrFortran,user_Nd)
-    user_CFInterFortran = generate_user_CreepFatigueInteractionCriterion(user_NdFortran,user_CFInter)
-    user_EquivSFortran = generate_user_RepresentativeStress(user_CFInterFortran,user_EquivS)
+    if Creep:
+        CreepFortran = generate_creep_subroutine(template_path,Creep)
+    if user_Tr:
+        user_TrFortran = generate_user_CreepRuptureLife(CreepFortran,user_Tr)
+    if user_Nd:
+        user_NdFortran = generate_user_FatigueLife(user_TrFortran,user_Nd)
+    if user_CFInter:
+        user_CFInterFortran = generate_user_CreepFatigueInteractionCriterion(user_NdFortran,user_CFInter)
+    if user_EquivS:
+        user_EquivSFortran = generate_user_RepresentativeStress(user_CFInterFortran,user_EquivS)
+    else:
+        user_EquivSFortran=''
     # 写出最终 For 文件
     fortran_file_path='{}\\{}.for'.format(script_dir,materialName)
     with open(fortran_file_path, 'w') as f:
         f.write(user_EquivSFortran)  # 将生成的 Fortran 代码写入文件
-    print('{}.for 已输出到 {}'.format(materialName,script_dir))
+    print(u'{}.for 已输出到 {}'.format(materialName,script_dir).encode('GB18030'))
     return fortran_file_path
 
 
@@ -375,6 +387,9 @@ def generate_creep_subroutine(template_path,Creep):
         updated_contentCE = CreepNBPN_q0()
     elif model == "RCC_q0":
         updated_contentCE = CreepRCC_q0()
+    else:
+        print(u"不支持的蠕变子程序类型：{}".format(model).encode('GB18030'))
+        return 0
     # 提取参数列表
     params_list = Creep[-1]
     # 生成参数行
@@ -394,21 +409,14 @@ def generate_creep_subroutine(template_path,Creep):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num,line_part)
-                else:
-                    line = "     {} {},".format(cont_num,line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num,line_part)
-                else:
-                    line = "     {} {},".format(cont_num,line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
-                line = "     {} {},".format(cont_num,line_part)
-
+                line = "     {} {},".format(cont_num, line_part)
             param_lines.append(line)
             cont_num = cont_num % 9 + 1  # 续行符循环1-9
 
@@ -624,17 +632,11 @@ def user_CreepRuptureLife_Larson_Miller(shuju):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
                 line = "     {} {},".format(cont_num, line_part)
@@ -716,17 +718,11 @@ def user_FatigueLife_Direct(shuju):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
                 line = "     {} {},".format(cont_num, line_part)
@@ -783,17 +779,11 @@ def user_FatigueLife_Langer(shuju):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
                 line = "     {} {},".format(cont_num, line_part)
@@ -886,7 +876,7 @@ def calculate_lines(x0, y0):
 def generate_user_RepresentativeStress(user_CFInterFortran,user_EquivS):
     method = user_EquivS[1]
     if method == "RCCmethod(Hayhurst)":
-        SF = user_EquivS[2][0]
+        SF = user_EquivS[2][0][0]
         updated_content1 = RCC(SF,user_CFInterFortran)
     else:
         SF = user_EquivS[2][0][0]
