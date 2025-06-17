@@ -68,7 +68,7 @@ class STPM_test1033DB(AFXDataDialog):
         #     mw.writeToMessageArea("Error reading Excel file:" + str(e))
         #     self.excel_data = None
 
-        tabItem = FXTabItem(p=TabBook_1, text='Geometry', ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=TabBook_1, text=u'几何模型'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_22 = FXVerticalFrame(p=TabBook_1,
                                      opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
@@ -139,8 +139,8 @@ class STPM_test1033DB(AFXDataDialog):
         fileName = os.path.join(thisDir, 'icon.png')
         icon = afxCreatePNGIcon(fileName)
         FXLabel(p=TabItem_22, text='', ic=icon)
-        button = FXButton(p=TabItem_22, text='para change', opts=BUTTON_NORMAL | JUSTIFY_LEFT)
-        tabItem = FXTabItem(p=TabBook_1, text='Materials', ic=None, opts=TAB_TOP_NORMAL,
+        button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        tabItem = FXTabItem(p=TabBook_1, text=u'材料'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_16 = FXVerticalFrame(p=TabBook_1,
             opts=FRAME_RAISED|FRAME_THICK|LAYOUT_FILL_X,
@@ -221,9 +221,9 @@ class STPM_test1033DB(AFXDataDialog):
             pl=0, pr=0, pt=0, pb=0)
         m = self.get_current_model()
         form.keyword99Kw.setValue(m.name)
-        ModelNameTxt=AFXTextField(p=HFrame_38, ncols=12, labelText="ModelName:", tgt=form.keyword99Kw, sel=0)
+        ModelNameTxt=AFXTextField(p=HFrame_38, ncols=12, labelText=u'模型:'.encode('GB18030'), tgt=form.keyword99Kw, sel=0)
         ModelNameTxt.hide()
-        self.ComboBox_15 = AFXComboBox(p=HFrame_38, ncols=0, nvis=1, text='Material :', tgt=form.keyword98Kw, sel=self.ID_MODEL_MATERIAL_COMBO_CHANGED)
+        self.ComboBox_15 = AFXComboBox(p=HFrame_38, ncols=0, nvis=1, text=u'目标材料:'.encode('GB18030'), tgt=form.keyword98Kw, sel=self.ID_MODEL_MATERIAL_COMBO_CHANGED)
         self.ComboBox_15.setTarget(self)
         self.ComboBox_15.setSelector(self.ID_MODEL_MATERIAL_COMBO_CHANGED)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_MODEL_MATERIAL_COMBO_CHANGED, STPM_test1033DB.model_meterial_changed)
@@ -240,13 +240,13 @@ class STPM_test1033DB(AFXDataDialog):
             pl=0, pr=0, pt=0, pb=0)
         VAligner_9 = AFXVerticalAligner(p=HFrame_31, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0)
-        spinner1 = AFXSpinner(VAligner_9, 6, 'UVARM vars', form.keyword61Kw, 0)
+        spinner1 = AFXSpinner(VAligner_9, 6, u'UVARM个数'.encode('GB18030'), form.keyword61Kw, 0)
         spinner1.setRange(0, 100)
         spinner1.setIncrement(1)
-        spinner2 = AFXSpinner(VAligner_9, 6, 'SDV vars', form.keyword62Kw, 0)
+        spinner2 = AFXSpinner(VAligner_9, 6, u'SDV个数'.encode('GB18030'), form.keyword62Kw, 0)
         spinner2.setRange(0, 9999)
         spinner2.setIncrement(1)
-        import1 = FXButton(p=VFrame_16, text='import', ic=None, tgt=self,
+        import1 = FXButton(p=VFrame_16, text=u'导入该材料'.encode('GB18030'), ic=None, tgt=self,
                                      sel=self.ID_CLICKED_import1,
                                      opts=BUTTON_NORMAL |LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         #l = FXLabel(p=VFrame_16, text='Button: Run', opts=JUSTIFY_LEFT)
@@ -254,13 +254,13 @@ class STPM_test1033DB(AFXDataDialog):
         import1.setTarget(self)
         import1.setSelector(self.ID_CLICKED_import1)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_import1, STPM_test1033DB.onImport1Clicked)
-        tabItem = FXTabItem(p=TabBook_1, text='Amplitudes', ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=TabBook_1, text=u'幅值表'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_6 = FXVerticalFrame(p=TabBook_1,
                                     opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
                                     x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
                                     pt=DEFAULT_SPACING, pb=DEFAULT_SPACING, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
-        GroupBox_5 = FXGroupBox(p=TabItem_6, text='Data Format', opts=FRAME_GROOVE | LAYOUT_FILL_X)
+        GroupBox_5 = FXGroupBox(p=TabItem_6, text=u'数据格式'.encode('GB18030'), opts=FRAME_GROOVE | LAYOUT_FILL_X)
         HFrame_8 = FXHorizontalFrame(p=GroupBox_5, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                      pl=0, pr=0, pt=0, pb=0)
         GroupBox_2 = FXGroupBox(p=HFrame_8, text='Separated XY*', opts=FRAME_GROOVE | LAYOUT_FILL_X)
@@ -294,7 +294,7 @@ class STPM_test1033DB(AFXDataDialog):
             FXVerticalSeparator(p=TabItem_6, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         else:
             FXHorizontalSeparator(p=TabItem_6, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
-        run2 = FXButton(p=TabItem_6, text='run2', ic=None, tgt=fileHandler,
+        run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=fileHandler,
                         sel=AFXMode.ID_ACTIVATE + 1,
                         opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         # l = FXLabel(p=TabItem_6, text='Button: Run', opts=JUSTIFY_LEFT)
@@ -359,7 +359,7 @@ class STPM_test1033DB(AFXDataDialog):
         l = FXLabel(p=VFrame_5, text='0', opts=JUSTIFY_LEFT)
         l = FXLabel(p=VFrame_5, text='100', opts=JUSTIFY_LEFT)
         l = FXLabel(p=VFrame_5, text='500', opts=JUSTIFY_LEFT)
-        tabItem = FXTabItem(p=TabBook_1, text='Cycle', ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=TabBook_1, text=u'分析步'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_5 = FXVerticalFrame(p=TabBook_1,
                                     opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
@@ -392,44 +392,44 @@ class STPM_test1033DB(AFXDataDialog):
                                     pl=0, pr=0, pt=0, pb=0)
         VAligner_10 = AFXVerticalAligner(p=VFrame_17, opts=0, x=0, y=0, w=0, h=0,
                                          pl=0, pr=0, pt=0, pb=0)
-        AFXTextField(p=VAligner_10, ncols=50, labelText='     before:', tgt=form.keyword68Kw, sel=0)
-        AFXTextField(p=VAligner_10, ncols=50, labelText='>>Cycle List:', tgt=form.keyword65Kw, sel=0)
+        AFXTextField(p=VAligner_10, ncols=50, labelText=u'     循环前分析步:'.encode('GB18030'), tgt=form.keyword68Kw, sel=0)
+        AFXTextField(p=VAligner_10, ncols=50, labelText=u'>>循环分析步构成:'.encode('GB18030'), tgt=form.keyword65Kw, sel=0)
         form.keyword65Kw.setValue("")
         self.form.keyword65Kw.setTarget(self)
         self.form.keyword65Kw.setSelector(self.ID_CYCLE_LIST_CHANGED)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CYCLE_LIST_CHANGED, self.onCycleListChanged)
 
-        AFXTextField(p=VAligner_10, ncols=50, labelText='     after:', tgt=form.keyword69Kw, sel=0)
-        AFXTextField(p=VAligner_10, ncols=12, labelText='     Cycle times:', tgt=form.keyword77Kw, sel=0)
-        AFXTextField(p=VAligner_10, ncols=12, labelText='     HOLDING time:', tgt=form.keyword94Kw, sel=0)
+        AFXTextField(p=VAligner_10, ncols=50, labelText=u'     循环后分析步:'.encode('GB18030'), tgt=form.keyword69Kw, sel=0)
+        AFXTextField(p=VAligner_10, ncols=12, labelText=u'     循环次数:'.encode('GB18030'), tgt=form.keyword77Kw, sel=0)
+        AFXTextField(p=VAligner_10, ncols=12, labelText=u'     HOLDING步步长:'.encode('GB18030'), tgt=form.keyword94Kw, sel=0)
         HFrame_33 = FXHorizontalFrame(p=VFrame_17, opts=0, x=0, y=0, w=0, h=0,
                                       pl=20, pr=0, pt=0, pb=0)
         FXRadioButton(p=HFrame_33, text='NEW', tgt=form.HFrame33Kw1, sel=58)
         FXRadioButton(p=HFrame_33, text='REPLACE', tgt=form.HFrame33Kw1, sel=59)
-        ComboBox_13 = AFXComboBox(p=HFrame_33, ncols=0, nvis=1, text='       StepType:', tgt=form.keyword90Kw, sel=0)
+        ComboBox_13 = AFXComboBox(p=HFrame_33, ncols=0, nvis=1, text=u'           分析步类型:'.encode('GB18030'), tgt=form.keyword90Kw, sel=0)
         ComboBox_13.setMaxVisible(10)
         ComboBox_13.appendItem(text='AUTO')
         ComboBox_13.appendItem(text='StaticStep')
         ComboBox_13.appendItem(text='ViscoStep')
         ComboBox_13.appendItem(text='HeatTransferStep')
-        createstep = FXButton(p=VFrame_17, text='creat step', ic=None, tgt=fileHandler,
+        createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
                               sel=AFXMode.ID_ACTIVATE + 1,
                               opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
-        l = FXLabel(p=VFrame_17, text='Button: creat step', opts=JUSTIFY_LEFT)
+        # l = FXLabel(p=VFrame_17, text='Button: creat step', opts=JUSTIFY_LEFT)
         if isinstance(TabItem_5, FXHorizontalFrame):
             FXVerticalSeparator(p=TabItem_5, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         else:
             FXHorizontalSeparator(p=TabItem_5, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
-        GroupBox_23 = FXGroupBox(p=TabItem_5, text='Quickly setting tools', opts=FRAME_GROOVE)
+        GroupBox_23 = FXGroupBox(p=TabItem_5, text=u'批量设置工具'.encode('GB18030'), opts=FRAME_GROOVE)
         HFrame_34 = FXHorizontalFrame(p=GroupBox_23, opts=0, x=0, y=0, w=0, h=0,
                                       pl=0, pr=0, pt=0, pb=0)
         FXRadioButton(p=HFrame_34, text='\xa1\xa1', tgt=form.GroupBox23Kw1, sel=60)
-        AFXTextField(p=HFrame_34, ncols=12, labelText='for step name contains:', tgt=form.keyword72Kw, sel=0)
-        FXRadioButton(p=HFrame_34, text='or', tgt=form.GroupBox23Kw1, sel=61)
-        AFXTextField(p=HFrame_34, ncols=12, labelText='for N*n+i step; n,i=', tgt=form.keyword73Kw, sel=0)
+        AFXTextField(p=HFrame_34, ncols=12, labelText=u'对名字中含有...的分析步:'.encode('GB18030'), tgt=form.keyword72Kw, sel=0)
+        FXRadioButton(p=HFrame_34, text=u'或'.encode('GB18030'), tgt=form.GroupBox23Kw1, sel=61)
+        AFXTextField(p=HFrame_34, ncols=12, labelText=u'对于从i开始每n的分析步(n,i):'.encode('GB18030'), tgt=form.keyword73Kw, sel=0)
         HFrame_35 = FXHorizontalFrame(p=GroupBox_23, opts=0, x=0, y=0, w=0, h=0,
                                       pl=0, pr=0, pt=0, pb=0)
-        ComboBox_11 = AFXComboBox(p=HFrame_35, ncols=0, nvis=1, text='method:', tgt=form.keyword70Kw, sel=0)
+        ComboBox_11 = AFXComboBox(p=HFrame_35, ncols=0, nvis=1, text=u'方法:'.encode('GB18030'), tgt=form.keyword70Kw, sel=0)
         ComboBox_11.setMaxVisible(10)
         ComboBox_11.appendItem(text='set Time period')
         ComboBox_11.appendItem(text='set Initial increment size')
@@ -439,9 +439,12 @@ class STPM_test1033DB(AFXDataDialog):
         ComboBox_11.appendItem(text='change Static to Visco')
         ComboBox_11.appendItem(text='change Visco to Static')
         ComboBox_11.appendItem(text='enable Restart')
-        AFXTextField(p=HFrame_35, ncols=12, labelText=' Value:', tgt=form.keyword74Kw, sel=0)
-        l = FXLabel(p=GroupBox_23, text='Button: modify step', opts=JUSTIFY_LEFT)
-        tabItem = FXTabItem(p=TabBook_1, text='Loads&&HTC', ic=None, opts=TAB_TOP_NORMAL,
+        AFXTextField(p=HFrame_35, ncols=12, labelText=u' 值:'.encode('GB18030'), tgt=form.keyword74Kw, sel=0)
+        # l = FXLabel(p=GroupBox_23, text='Button: modify step', opts=JUSTIFY_LEFT)
+        editstep = FXButton(p=GroupBox_23, text=u'修改分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
+                      sel=AFXMode.ID_ACTIVATE + 1,
+                      opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        tabItem = FXTabItem(p=TabBook_1, text=u'载荷/换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_7 = FXVerticalFrame(p=TabBook_1,
                                     opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
@@ -450,15 +453,18 @@ class STPM_test1033DB(AFXDataDialog):
         GroupBox_26 = FXGroupBox(p=TabItem_7, text='Step List (%OP%)', opts=FRAME_GROOVE)
         VAligner_11 = AFXVerticalAligner(p=GroupBox_26, opts=0, x=0, y=0, w=0, h=0,
                                          pl=0, pr=0, pt=0, pb=0)
-        AFXTextField(p=VAligner_11, ncols=12, labelText='before:', tgt=form.keyword92Kw, sel=0)
-        AFXTextField(p=VAligner_11, ncols=50, labelText='Composition of cycle:', tgt=form.keyword80Kw, sel=0)
+        AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环前分析步:'.encode('GB18030'), tgt=form.keyword92Kw, sel=0)
+        AFXTextField(p=VAligner_11, ncols=50, labelText=u'循环分析步构成:'.encode('GB18030'), tgt=form.keyword80Kw, sel=0)
 
         self.form.keyword80Kw.setTarget(self)
         self.form.keyword80Kw.setSelector(self.ID_TEXT_CHANGED)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TEXT_CHANGED, self.onTextChanged)
 
-        AFXTextField(p=VAligner_11, ncols=12, labelText='after:', tgt=form.keyword93Kw, sel=0)
-        AFXTextField(p=VAligner_11, ncols=12, labelText='Cycle times:', tgt=form.keyword81Kw, sel=0)
+        AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环后分析步:'.encode('GB18030'), tgt=form.keyword93Kw, sel=0)
+        AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环次数:'.encode('GB18030'), tgt=form.keyword81Kw, sel=0)
+        pairamps = FXButton(p=TabItem_7, text=u'匹配幅值表(当前标签页)'.encode('GB18030'), ic=None, tgt=fileHandler,
+                      sel=AFXMode.ID_ACTIVATE + 1,
+                      opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         TabBook_5 = FXTabBook(p=TabItem_7, tgt=None, sel=0,
                               opts=TABBOOK_NORMAL,
                               x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
@@ -478,7 +484,7 @@ class STPM_test1033DB(AFXDataDialog):
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea("no model")
             self.HTCList = ['HTC1', 'HTC2']
-        tabItem = FXTabItem(p=TabBook_5, text='Heat', ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=TabBook_5, text=u'换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_20 = FXVerticalFrame(p=TabBook_5,
                                      opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
@@ -520,7 +526,7 @@ class STPM_test1033DB(AFXDataDialog):
             self.STRESSList = []
             model_loads = m.loads.keys() 
             if not model_loads:
-                mw.writeToMessageArea("Debug: m.loads is None or empty.")
+                mw.writeToMessageArea(u'Debug: 载荷列表为空'.encode('GB18030'))
             else:
                 for i in model_loads:
                     self.STRESSList.append(i)
@@ -530,7 +536,7 @@ class STPM_test1033DB(AFXDataDialog):
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea(str(e))
 
-        tabItem = FXTabItem(p=TabBook_5, text='Stress', ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=TabBook_5, text=u'载荷'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_21 = FXVerticalFrame(p=TabBook_5,
                                      opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
@@ -588,7 +594,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.table1.setStretchableColumn(table.getNumColumns() - 1)
         self.table1.showHorizontalGrid(True)
         self.table1.showVerticalGrid(True)
-        tabItem = FXTabItem(p=TabBook_1, text='Fortran Subroutine', ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=TabBook_1, text=u'子程序'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         tabItem.hide()
         TabItem_9 = FXVerticalFrame(p=TabBook_1,
