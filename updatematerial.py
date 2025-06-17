@@ -409,21 +409,14 @@ def generate_creep_subroutine(template_path,Creep):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num,line_part)
-                else:
-                    line = "     {} {},".format(cont_num,line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num,line_part)
-                else:
-                    line = "     {} {},".format(cont_num,line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
-                line = "     {} {},".format(cont_num,line_part)
-
+                line = "     {} {},".format(cont_num, line_part)
             param_lines.append(line)
             cont_num = cont_num % 9 + 1  # 续行符循环1-9
 
@@ -639,17 +632,11 @@ def user_CreepRuptureLife_Larson_Miller(shuju):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
                 line = "     {} {},".format(cont_num, line_part)
@@ -731,17 +718,11 @@ def user_FatigueLife_Direct(shuju):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
                 line = "     {} {},".format(cont_num, line_part)
@@ -798,17 +779,11 @@ def user_FatigueLife_Langer(shuju):
         for chunk_idx, chunk in enumerate(chunks):
             line_part = ", ".join(chunk)
             # 首行处理
-            if chunk_idx == 0:
-                if i == 0:  # 第一行特殊格式
-                    line = "     {} (/{},".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
-            # 最后一块处理
-            elif chunk_idx == len(chunks) - 1:
-                if i == rows - 1:  # 最后一行结尾
-                    line = "     {} {}/)".format(cont_num, line_part)
-                else:
-                    line = "     {} {},".format(cont_num, line_part)
+            if i == 0 and chunk_idx == 0:
+                line = "     {} (/{},".format(cont_num, line_part)
+                # 最后一块处理
+            elif i == rows - 1 and chunk_idx == len(chunks) - 1:
+                line = "     {} {}/)".format(cont_num, line_part)
             # 中间块处理
             else:
                 line = "     {} {},".format(cont_num, line_part)

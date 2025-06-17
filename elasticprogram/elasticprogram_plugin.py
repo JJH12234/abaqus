@@ -22,7 +22,7 @@ class Softwareprogram_plugin(AFXForm):
         # self.cmd2 = AFXGuiCommand(self, '_run_brittle_assess', __name__)
         # self.cmd2 = AFXGuiCommand(self, __name__, '_run_brittle_assess')
         pickedDefault = ''
-        self.analysetypeKw = AFXStringKeyword(self.cmd, 'analysetype', True, 'Inelastic strain')
+        self.analysetypeKw = AFXStringKeyword(self.cmd, 'analysetype', True, u'非弹性应变'.encode('GB18030'))
         self.CreepDamageFieldKw = AFXStringKeyword(self.cmd, 'CreepDamageField', True, 'UVARM')
         self.FatigueDamageFieldKw = AFXStringKeyword(self.cmd, 'FatigueDamageField', True, 'UVARM')
         self.CFICriterionKw = AFXStringKeyword(self.cmd, 'CFICriterion', True, '0.3,0.3')

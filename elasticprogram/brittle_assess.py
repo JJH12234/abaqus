@@ -1,283 +1,234 @@
 # -*- coding: utf-8 -*-
+"""
+脆断评定工具
+Python 2.7 + Tkinter（兼容 Abaqus 自带解释器）
+"""
 import numpy as np
 import math
 import Tkinter as tk
 import tkFileDialog as filedialog
 import tkMessageBox as messagebox
 import csv
-import os, sys, subprocess
-import traceback
-import multiprocessing as mp
-import os, sys, subprocess, platform
-import threading
-import time
-def launch_brittle_gui():
-    print(55555)
-    python_exe  = sys.executable            # 若 Abaqus-Python 缺 Tk，就换系统 python
-    print(666666)
-    plugin_dir  = os.path.dirname(__file__)
-    print(7777777)
-
-    inline = (
-        "import sys, os;"
-        "sys.path.insert(0, r'{0}');"
-        "import brittle_assess as _m;"
-        "_m.run_gui()"
-    ).format(plugin_dir.replace('\\', '\\\\'))
-
-    flags = subprocess.CREATE_NEW_CONSOLE if platform.system()=="Windows" else 0
-    subprocess.Popen([python_exe, "-u", "-c", inline],
-                     creationflags=flags)
-def launch_brittle_gui_delayed():
-    """
-    延迟启动GUI，让ABAQUS主循环有时间处理完成
-    """
-    def delayed_start():
-        print("等待2秒后启动GUI...")
-        time.sleep(2)  # 等待2秒
-        print("开始启动GUI...")
-        run_gui()
-    
-    # 在新线程中延迟启动
-    gui_thread = threading.Thread(target=delayed_start)
-    gui_thread.daemon = False  # 非守护线程
-    gui_thread.start()
-    print("GUI将在2秒后启动...")
-
-# 或者更简单的方案，直接在主调用中延迟
-def launch_brittle_gui_simple():
-    """
-    最简单有效的解决方案
-    """
-    import threading
-    import time
-    
-    def gui_worker():
-        time.sleep(10)  # 让主程序先继续
-        try:
-            run_gui()
-        except Exception as e:
-            print("GUI启动失败: {}".format(e))
-    
-    thread = threading.Thread(target=gui_worker)
-    thread.daemon = True  # 重要：守护线程
-    thread.start()
-    print("GUI启动中...")
+import os, sys, subprocess, platform, threading, time
+from multiprocessing import freeze_support
 
 
-# # 读取文本文件
+# ──────────────────────────────── 通用函数 ────────────────────────────────
 def read_data(file_path):
-    """ 读取 txt 文件中的数据 """
+    """读取 txt 中的数值并剔除含 NaN 行"""
     data = np.genfromtxt(file_path)
-    # 数据清洗 - 移除包含NaN的行
     return data[~np.isnan(data).any(axis=1)]
 
-# 二次多项式拟�?
+
 def quadratic_poly_fit(x, y):
-    """ 对数据进行二次多项式拟合 """
-    coefficients = np.polyfit(x, y, 2)
-    return coefficients
+    """二次多项式拟合"""
+    return np.polyfit(x, y, 2)
 
-# 多项式积�?
-def integrate_polynomial(coefficients):
-    """ 对二次多项式进行积分，返回积分后的三次多项式系数 """
-    return [
-        coefficients[0] / 3,  # a2 -> a3
-        coefficients[1] / 2,  # a1 -> a2
-        coefficients[2],      # a0 -> a1
-        0                     # 积分常数项（默认 0�?
-    ]
 
-# 计算薄膜应力 sigma_p
-def calculate_sigma_p(integrated_coeffs, t):
-    """ 计算薄膜应力 sigma_p """
-    return np.polyval(integrated_coeffs, t) / t
+def integrate_polynomial(coeffs):
+    """二次多项式积分，得到三次多项式系数"""
+    return [coeffs[0] / 3.0, coeffs[1] / 2.0, coeffs[2], 0.0]
 
-# 计算应力强度因子 KI
+
+def calculate_sigma_p(integ_coeffs, t):
+    """薄膜应力 σ_p"""
+    return np.polyval(integ_coeffs, t) / t
+
+
 def calculate_KI(sigma_p, sigma_q, t):
-    """ 计算应力强度因子 KI """
-    return (sigma_p * 1.08 + sigma_q * 0.68) * (math.pi * 0.25 * t / 1000) ** 0.5 * 1.11
+    """应力强度因子 KI"""
+    return (sigma_p * 1.08 + sigma_q * 0.68) * (math.pi * 0.25 * t / 1000.0) ** 0.5 * 1.11
 
-# 计算温度 T
-def calculate_temperature(coefficients, t):
-    """ 计算 0.25t 处的温度 """
-    return np.polyval(coefficients, 0.25 * t)
 
-# 计算断裂韧�? KIc（按公式计算�?
+def calculate_temperature(coeffs, t):
+    """0.25t 处温度"""
+    return np.polyval(coeffs, 0.25 * t)
+
+
 def calculate_KIc(T, Tk):
-    """ 计算断裂韧�? KIc，最大�? 220 """
+    """断裂韧度 KIc（公式法，最大 220 MPa·m^0.5）"""
     return min(26 + 36 * math.exp(0.02 * (T - Tk)), 220)
 
-# 评估是否通过
+
 def assess_KI_vs_KIc(KI, KIc, k):
-    """ 评估 KI 是否小于 KIc/k """
+    """评定结论"""
     return u"通过" if KI < KIc / k else u"不通过"
 
-# 主程�?
-def main(file_path_stress, file_path_temperature, t, k, Tk=None, KIc_method=0, fixed_KIc=None):
-    """
-    计算应力、温度、断裂韧�? KIc，并进行合格评估�?
 
-    参数�?
-    - file_path_stress: 应力数据文件
-    - file_path_temperature: 温度数据文件
-    - t: 壁厚
-    - k: 安全系数
-    - Tk: 参考温度（仅在 KIc_method=0 时使用）
-    - KIc_method: 计算方式�?0=按公式计算，1=使用固定值）
-    - fixed_KIc: 固定�? KIc 值（仅在 KIc_method=1 时使用）
-    """
-    # 读取数据
-    data_stress = read_data(file_path_stress)
-    data_temperature = read_data(file_path_temperature)
+# ──────────────────────────────── 计算主流程 ────────────────────────────────
+def main(file_stress, file_temp, t, k,
+         Tk=None, KIc_method=0, fixed_KIc=None):
+    # 1. 读取数据
+    data_stress = read_data(file_stress)
+    data_temp = read_data(file_temp)
 
-    # 定义 x 轴（�? 0 �? t 均匀分布�?
-    num_points = data_stress.shape[1] - 1  # 除去时间�?
-    x = np.linspace(0, t, num_points)
+    num_pts = data_stress.shape[1] - 1
+    x = np.linspace(0, t, num_pts)
 
-    # 结果存储
-    time_results = data_stress[:, 0]  # 获取时间�?
-    sigma_p_results = []
-    sigma_q_results = []
-    KI_results = []
-    temperature_results = []
-    KIc_results = []
-    assessment_results = []
+    # 2. 初始化结果容器
+    time_col = data_stress[:, 0]
+    sigma_p_list, sigma_q_list = [], []
+    KI_list, temp_list, KIc_list, result_list = [], [], [], [], []
 
-    # 逐行计算
+    # 3. 循环处理每一行
     for i in range(data_stress.shape[0]):
-        y_stress = data_stress[i, 1:]  # 获取应力数据
-        y_temperature = data_temperature[i, 1:]  # 获取温度数据
+        y_stress = data_stress[i, 1:]
+        y_temp = data_temp[i, 1:]
 
-        # 拟合应力数据
-        coefficients_stress = quadratic_poly_fit(x, y_stress)
-        integrated_coeffs = integrate_polynomial(coefficients_stress)
+        # ─ 应力 ─
+        coeffs_stress = quadratic_poly_fit(x, y_stress)
+        coeffs_int = integrate_polynomial(coeffs_stress)
+        sigma_p = calculate_sigma_p(coeffs_int, t)
+        sigma_q = data_stress[i, 1] - sigma_p
 
-        # 计算薄膜应力 sigma_p
-        sigma_p = calculate_sigma_p(integrated_coeffs, t)
-        sigma_p_results.append(sigma_p)
-
-        # 计算弯曲应力 sigma_q
-        sigma_q = data_stress[i, 1] - sigma_p  # �?2列数�? - sigma_p
-        sigma_q_results.append(sigma_q)
-
-        # 计算应力强度因子 KI
         KI = calculate_KI(sigma_p, sigma_q, t)
-        KI_results.append(KI)
 
-        # 拟合温度数据并计�? 0.25t 处的温度 T
-        coefficients_temperature = quadratic_poly_fit(x, y_temperature)
-        T = calculate_temperature(coefficients_temperature, t)
-        temperature_results.append(T)
+        # ─ 温度 ─
+        coeffs_temp = quadratic_poly_fit(x, y_temp)
+        T = calculate_temperature(coeffs_temp, t)
 
-        # 计算 KIc
+        # ─ KIc ─
         if KIc_method == 0:
-            KIc = calculate_KIc(T, Tk)  # 按公式计�?
-        elif KIc_method == 1:
-            KIc = fixed_KIc  # 采用固定�?
+            KIc = calculate_KIc(T, Tk)
         else:
-            raise ValueError("KIc_method 只能�? 0（公式计算）�? 1（固定值）")
-        KIc_results.append(KIc)
+            KIc = fixed_KIc
 
-        # 评估是否通过
-        assessment = assess_KI_vs_KIc(KI, KIc, k)
-        assessment_results.append(assessment)
+        verdict = assess_KI_vs_KIc(KI, KIc, k)
 
-    # 将结果保存为CSV
-    output_file = '脆断评定结果.csv'
-    with open(output_file, 'wb') as f:
+        # 收集
+        sigma_p_list.append(sigma_p)
+        sigma_q_list.append(sigma_q)
+        KI_list.append(KI)
+        temp_list.append(T)
+        KIc_list.append(KIc)
+        result_list.append(verdict)
+
+    # 4. 保存 CSV
+    out_csv = u"脆断评定结果.csv"
+    with open(out_csv, "wb") as f:
         writer = csv.writer(f)
-        # 写入表头
-        writer.writerow(['时间', '薄膜应力', '弯曲应力', '应力强度因子', '温度', '断裂韧�?', '评估结果'])
-        # 写入数据
-        for i in range(len(time_results)):
+        writer.writerow(
+            [u"时间", u"薄膜应力", u"弯曲应力", u"应力强度因子",
+             u"温度", u"断裂韧度", u"评估结果"]
+        )
+        for i in range(len(time_col)):
             writer.writerow([
-                time_results[i],
-                sigma_p_results[i],
-                sigma_q_results[i],
-                KI_results[i],
-                temperature_results[i],
-                KIc_results[i],
-                assessment_results[i].encode('utf-8')  # 处理中文字符
+                time_col[i], sigma_p_list[i], sigma_q_list[i],
+                KI_list[i], temp_list[i], KIc_list[i],
+                result_list[i].encode("utf-8")
             ])
-    
-    messagebox.showinfo("完成", "计算结果已保存到 {}".format(output_file))
 
-# GUI界面
+    messagebox.showinfo(u"完成", u"计算结果已保存到 {}".format(out_csv))
+
+
+# ──────────────────────────────── 图形界面 ────────────────────────────────
 def run_gui():
-    def browse_file(file_type):
-        filename = filedialog.askopenfilename(filetypes=[("{} 文件".format(file_type), "*.txt")])
-        if file_type == "应力":
-            entry_file_stress.delete(0, tk.END)
-            entry_file_stress.insert(0, filename)
+    # ─ 内部工具函数 ─
+    def browse(file_tag):
+        path = filedialog.askopenfilename(filetypes=[(u"{} 文件".format(file_tag), "*.txt")])
+        if not path:
+            return
+        if file_tag == u"应力":
+            ent_stress.delete(0, tk.END)
+            ent_stress.insert(0, path)
         else:
-            entry_file_temperature.delete(0, tk.END)
-            entry_file_temperature.insert(0, filename)
+            ent_temp.delete(0, tk.END)
+            ent_temp.insert(0, path)
 
-    def start_calculation():
+    def start():
         try:
-            file_path_stress = entry_file_stress.get()
-            file_path_temperature = entry_file_temperature.get()
-            t = float(entry_thickness.get())
-            k = float(entry_safety_factor.get())
-            Tk = float(entry_reference_temp.get())
-            KIc_method = int(var_KIc_method.get())
-            fixed_KIc = float(entry_fixed_KIc.get()) if KIc_method == 1 else None
+            f_stress = ent_stress.get()
+            f_temp = ent_temp.get()
+            t_val = float(ent_t.get())
+            k_val = float(ent_k.get())
 
-            main(file_path_stress, file_path_temperature, t, k, Tk, KIc_method, fixed_KIc)
+            method = int(var_method.get())
+            Tk_val = float(ent_Tk.get()) if method == 0 else None
+            KIc_fixed = float(ent_KIc.get()) if method == 1 else None
+
+            main(f_stress, f_temp, t_val, k_val,
+                 Tk=Tk_val, KIc_method=method, fixed_KIc=KIc_fixed)
         except Exception as e:
-            messagebox.showerror("错误", "发生错误: {}".format(e))
+            messagebox.showerror(u"错误", u"发生错误：{}".format(e))
 
-    # 创建主窗�?
+    # ─ 创建窗口 ─
     root = tk.Tk()
-    root.title("防脆断评定工�?")
-    root.geometry("850x450")  # 增大窗口尺寸
-
-    # 设置背景颜色
+    root.title(u"防脆断评定工具")
+    root.geometry("850x450")
     root.configure(bg="#f0f0f0")
 
-    # 设置字体
-    font_large = ("Microsoft YaHei", 12)
-    font_medium = ("Microsoft YaHei", 10)
+    f_large = ("Microsoft YaHei", 12)
+    f_mid = ("Microsoft YaHei", 10)
 
-    # 设置UI元素
-    tk.Label(root, text="应力数据文件:", bg="#f0f0f0", font=font_large).grid(row=0, column=0, padx=10, pady=10, sticky="w")
-    entry_file_stress = tk.Entry(root, width=70, font=font_medium)
-    entry_file_stress.grid(row=0, column=1, padx=10, pady=10)
-    tk.Button(root, text="浏览", command=lambda: browse_file("应力"), bg="teal", fg="white", font=font_medium).grid(row=0, column=2, padx=10, pady=10)
+    # 行 0 : 应力文件
+    tk.Label(root, text=u"应力数据文件:", bg="#f0f0f0", font=f_large
+             ).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+    ent_stress = tk.Entry(root, width=70, font=f_mid)
+    ent_stress.grid(row=0, column=1, padx=10, pady=10)
+    tk.Button(root, text=u"浏览", command=lambda: browse(u"应力"),
+              bg="teal", fg="white", font=f_mid
+              ).grid(row=0, column=2, padx=10, pady=10)
 
-    tk.Label(root, text="温度数据文件:", bg="#f0f0f0", font=font_large).grid(row=1, column=0, padx=10, pady=10, sticky="w")
-    entry_file_temperature = tk.Entry(root, width=70, font=font_medium)
-    entry_file_temperature.grid(row=1, column=1, padx=10, pady=10)
-    tk.Button(root, text="浏览", command=lambda: browse_file("温度"), bg="teal", fg="white", font=font_medium).grid(row=1, column=2, padx=10, pady=10)
+    # 行 1 : 温度文件
+    tk.Label(root, text=u"温度数据文件:", bg="#f0f0f0", font=f_large
+             ).grid(row=1, column=0, padx=10, pady=10, sticky="w")
+    ent_temp = tk.Entry(root, width=70, font=f_mid)
+    ent_temp.grid(row=1, column=1, padx=10, pady=10)
+    tk.Button(root, text=u"浏览", command=lambda: browse(u"温度"),
+              bg="teal", fg="white", font=f_mid
+              ).grid(row=1, column=2, padx=10, pady=10)
 
-    tk.Label(root, text="壁厚 (t):", bg="#f0f0f0", font=font_large).grid(row=2, column=0, padx=10, pady=10, sticky="w")
-    entry_thickness = tk.Entry(root, font=font_medium)
-    entry_thickness.grid(row=2, column=1, padx=10, pady=10)
+    # 行 2 : 壁厚 t
+    tk.Label(root, text=u"壁厚 (t):", bg="#f0f0f0", font=f_large
+             ).grid(row=2, column=0, padx=10, pady=10, sticky="w")
+    ent_t = tk.Entry(root, font=f_mid)
+    ent_t.grid(row=2, column=1, padx=10, pady=10, sticky="w")
 
-    tk.Label(root, text="安全系数 (k):", bg="#f0f0f0", font=font_large).grid(row=3, column=0, padx=10, pady=10, sticky="w")
-    entry_safety_factor = tk.Entry(root, font=font_medium)
-    entry_safety_factor.grid(row=3, column=1, padx=10, pady=10)
+    # 行 3 : 安全系数 k
+    tk.Label(root, text=u"安全系数 (k):", bg="#f0f0f0", font=f_large
+             ).grid(row=3, column=0, padx=10, pady=10, sticky="w")
+    ent_k = tk.Entry(root, font=f_mid)
+    ent_k.grid(row=3, column=1, padx=10, pady=10, sticky="w")
 
-    tk.Label(root, text="参考温�? (Tk):", bg="#f0f0f0", font=font_large).grid(row=4, column=0, padx=10, pady=10, sticky="w")
-    entry_reference_temp = tk.Entry(root, font=font_medium)
-    entry_reference_temp.grid(row=4, column=1, padx=10, pady=10)
+    # 行 4 : 参考温度 Tk
+    tk.Label(root, text=u"参考温度 (Tk):", bg="#f0f0f0", font=f_large
+             ).grid(row=4, column=0, padx=10, pady=10, sticky="w")
+    ent_Tk = tk.Entry(root, font=f_mid)
+    ent_Tk.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
-    tk.Label(root, text="KIc计算方式:", bg="#f0f0f0", font=font_large).grid(row=5, column=0, padx=10, pady=10, sticky="w")
-    var_KIc_method = tk.StringVar(value="0")
-    tk.Radiobutton(root, text="按公式计�?", variable=var_KIc_method, value="0", font=font_medium).grid(row=5, column=1, padx=10, pady=10, sticky="w")
-    tk.Radiobutton(root, text="使用固定�?", variable=var_KIc_method, value="1", font=font_medium).grid(row=5, column=2, padx=10, pady=10, sticky="w")
+    # 行 5 : KIc 计算方式（放到一个 Frame 中并排）
+    tk.Label(root, text=u"KIc 计算方式:", bg="#f0f0f0", font=f_large
+             ).grid(row=5, column=0, padx=10, pady=10, sticky="w")
 
-    tk.Label(root, text="固定KIc�?:", bg="#f0f0f0", font=font_large).grid(row=6, column=0, padx=10, pady=10, sticky="w")
-    entry_fixed_KIc = tk.Entry(root, font=font_medium)
-    entry_fixed_KIc.grid(row=6, column=1, padx=10, pady=10)
+    frame_method = tk.Frame(root, bg="#f0f0f0")
+    frame_method.grid(row=5, column=1, columnspan=2, padx=10, pady=10, sticky="w")
 
-    tk.Button(root, text="开始计�?", command=start_calculation, bg="teal", fg="white", font=("Microsoft YaHei", 14), width=20).grid(row=7, column=0, columnspan=3, pady=20)
+    var_method = tk.StringVar(value="0")
+    tk.Radiobutton(frame_method, text=u"按公式计算",
+                   variable=var_method, value="0",
+                   font=f_mid, bg="#f0f0f0"
+                   ).pack(side="left", padx=5)
+    tk.Radiobutton(frame_method, text=u"使用固定值",
+                   variable=var_method, value="1",
+                   font=f_mid, bg="#f0f0f0"
+                   ).pack(side="left", padx=5)
+
+    # 行 6 : 固定 KIc 值
+    tk.Label(root, text=u"固定 KIc 值:", bg="#f0f0f0", font=f_large
+             ).grid(row=6, column=0, padx=10, pady=10, sticky="w")
+    ent_KIc = tk.Entry(root, font=f_mid)
+    ent_KIc.grid(row=6, column=1, padx=10, pady=10, sticky="w")
+
+    # 行 7 : 开始按钮
+    tk.Button(root, text=u"开始计算", command=start,
+              bg="teal", fg="white",
+              font=("Microsoft YaHei", 14), width=20
+              ).grid(row=7, column=0, columnspan=3, pady=25)
 
     root.mainloop()
 
-# 启动UI
-if __name__=="__main__":
-    from multiprocessing import freeze_support  # 安全起见
-    freeze_support()
-    run_gui()       # ← 关键调用
+
+# ──────────────────────────────── 独立启动 ────────────────────────────────
+if __name__ == "__main__":
+    freeze_support()   # Windows 下多进程安全
+    run_gui()
