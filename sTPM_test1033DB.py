@@ -34,8 +34,9 @@ class STPM_test1033DB(AFXDataDialog):
         ID_TAB_CHANGED,
         ID_CLICKED_importfuzhi,
         ID_CLICKED_createstep,
-        ID_CLICKED_modifystep
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 17)
+        ID_CLICKED_modifystep,
+        ID_CLICKED_updateModel
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 18)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
 
