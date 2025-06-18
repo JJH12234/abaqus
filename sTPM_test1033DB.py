@@ -499,9 +499,9 @@ class STPM_test1033DB(AFXDataDialog):
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea("no model")
             self.HTCList = ['HTC1', 'HTC2']
-        tabItem = FXTabItem(p=TabBook_5, text=u'换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=self.TabBook_5, text=u'换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
-        TabItem_20 = FXVerticalFrame(p=TabBook_5,
+        TabItem_20 = FXVerticalFrame(p=self.TabBook_5,
                                      opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
                                      x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
                                      pt=DEFAULT_SPACING, pb=DEFAULT_SPACING, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
@@ -523,7 +523,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.tableH.setColumnWidth(3, 200)
         self.tableH.setColumnType(3, AFXTable.TEXT)
         self.tableH.setLeadingRowLabels('HTC (%NM%)\tAmpName\tTempName')
-        self.tableH.setStretchableColumn(table.getNumColumns() - 1)
+        self.tableH.setStretchableColumn(self.tableH.getNumColumns() - 1)
         self.tableH.showHorizontalGrid(True)
         self.tableH.showVerticalGrid(True)
 
@@ -551,9 +551,9 @@ class STPM_test1033DB(AFXDataDialog):
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea(str(e))
 
-        tabItem = FXTabItem(p=TabBook_5, text=u'载荷'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
+        tabItem = FXTabItem(p=self.TabBook_5, text=u'载荷'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
-        TabItem_21 = FXVerticalFrame(p=TabBook_5,
+        TabItem_21 = FXVerticalFrame(p=self.TabBook_5,
                                      opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
                                      x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
                                      pt=DEFAULT_SPACING, pb=DEFAULT_SPACING, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
@@ -573,14 +573,14 @@ class STPM_test1033DB(AFXDataDialog):
         self.tableL.setColumnWidth(2, 100)
         self.tableL.setColumnType(2, AFXTable.FLOAT)
         self.tableL.setLeadingRowLabels('Load (%NM%)\tAmp')
-        self.tableL.setStretchableColumn(table.getNumColumns() - 1)
+        self.tableL.setStretchableColumn(self.tableL.getNumColumns() - 1)
         self.tableL.showHorizontalGrid(True)
         self.tableL.showVerticalGrid(True)
         if self.STRESSList:
             try:
                 for i in range(len(self.STRESSList)):
                     if i >= self.tableL.getNumRows() - 1: # 如果需要更多行
-                        self.tableL.insertRows(table.getNumRows(), 1) # 在末尾插入新行
+                        self.tableL.insertRows(self.tableL.getNumRows(), 1) # 在末尾插入新行
                     self.tableL.setItemText(i + 1, 1, str(self.STRESSList[i]))
                     self.tableL.setItemText(i + 1, 2, '%OP%_%NM%')
             except Exception as e:
@@ -606,7 +606,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.table1.setColumnWidth(5, 100)
         self.table1.setColumnType(5, AFXTable.FLOAT)
         self.table1.setLeadingRowLabels('Temperature field at OP\tstart Step\tstart Inc\tend Step\tend Inc')
-        self.table1.setStretchableColumn(table.getNumColumns() - 1)
+        self.table1.setStretchableColumn(self.table1.getNumColumns() - 1)
         self.table1.showHorizontalGrid(True)
         self.table1.showVerticalGrid(True)
         tabItem = FXTabItem(p=TabBook_1, text=u'子程序'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
@@ -744,8 +744,8 @@ class STPM_test1033DB(AFXDataDialog):
         AFXTextField(p=HFrame_12, ncols=12, labelText='DownStepLength:', tgt=form.keyword30Kw, sel=0)
 
         # 在TabBook_5创建后添加事件监听
-        TabBook_5.setTarget(self)
-        TabBook_5.setSelector(self.ID_TAB_CHANGED)
+        self.TabBook_5.setTarget(self)
+        self.TabBook_5.setSelector(self.ID_TAB_CHANGED)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TAB_CHANGED, STPM_test1033DB.onTabChanged)
 
     # 主界面DB初始化结束，开始定义函数
