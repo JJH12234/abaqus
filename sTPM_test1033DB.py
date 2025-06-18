@@ -465,7 +465,7 @@ class STPM_test1033DB(AFXDataDialog):
         pairamps = FXButton(p=TabItem_7, text=u'匹配幅值表(当前标签页)'.encode('GB18030'), ic=None, tgt=fileHandler,
                       sel=AFXMode.ID_ACTIVATE + 1,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
-        TabBook_5 = FXTabBook(p=TabItem_7, tgt=None, sel=0,
+        self.TabBook_5 = FXTabBook(p=TabItem_7, tgt=None, sel=0,
                               opts=TABBOOK_NORMAL,
                               x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
                               pt=DEFAULT_SPACING, pb=DEFAULT_SPACING)
@@ -496,28 +496,28 @@ class STPM_test1033DB(AFXDataDialog):
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
         vf.setSelector(99)
-        table = AFXTable(vf, 6, 4, 6, 4, form.keyword78Kw, 0, AFXTABLE_EDITABLE | LAYOUT_FILL_X)
-        table.setPopupOptions(
+        self.tableH = AFXTable(vf, 6, 4, 6, 4, form.keyword78Kw, 0, AFXTABLE_EDITABLE | LAYOUT_FILL_X)
+        self.tableH.setPopupOptions(
             AFXTable.POPUP_CUT | AFXTable.POPUP_COPY | AFXTable.POPUP_PASTE | AFXTable.POPUP_INSERT_ROW | AFXTable.POPUP_DELETE_ROW | AFXTable.POPUP_CLEAR_CONTENTS | AFXTable.POPUP_READ_FROM_FILE | AFXTable.POPUP_WRITE_TO_FILE)
-        table.setLeadingRows(1)
-        table.setLeadingColumns(1)
-        table.setColumnWidth(1, 200)
-        table.setColumnType(1, AFXTable.TEXT)
-        table.setColumnWidth(2, 200)
-        table.setColumnType(2, AFXTable.TEXT)
-        table.setColumnWidth(3, 200)
-        table.setColumnType(3, AFXTable.TEXT)
-        table.setLeadingRowLabels('HTC (%NM%)\tAmpName\tTempName')
-        table.setStretchableColumn(table.getNumColumns() - 1)
-        table.showHorizontalGrid(True)
-        table.showVerticalGrid(True)
+        self.tableH.setLeadingRows(1)
+        self.tableH.setLeadingColumns(1)
+        self.tableH.setColumnWidth(1, 200)
+        self.tableH.setColumnType(1, AFXTable.TEXT)
+        self.tableH.setColumnWidth(2, 200)
+        self.tableH.setColumnType(2, AFXTable.TEXT)
+        self.tableH.setColumnWidth(3, 200)
+        self.tableH.setColumnType(3, AFXTable.TEXT)
+        self.tableH.setLeadingRowLabels('HTC (%NM%)\tAmpName\tTempName')
+        self.tableH.setStretchableColumn(table.getNumColumns() - 1)
+        self.tableH.showHorizontalGrid(True)
+        self.tableH.showVerticalGrid(True)
 
         if self.HTCList:
             try:
                 for i in range(0, len(self.HTCList)):
-                    table.setItemText(i + 1, 1, str(self.HTCList[i]))
-                    table.setItemText(i + 1, 2, '%OP%_%NM%_HTC')
-                    table.setItemText(i + 1, 3, '%OP%_%NM%_TEMP')
+                    self.tableH.setItemText(i + 1, 1, str(self.HTCList[i]))
+                    self.tableH.setItemText(i + 1, 2, '%OP%_%NM%_HTC')
+                    self.tableH.setItemText(i + 1, 3, '%OP%_%NM%_TEMP')
             except Exception as e:
                 print("Error filling table:", str(e))
 
@@ -548,26 +548,26 @@ class STPM_test1033DB(AFXDataDialog):
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
         vf.setSelector(99)
-        table = AFXTable(vf, 6, 3, 6, 3, form.keyword82Kw, 0, AFXTABLE_EDITABLE | LAYOUT_FILL_X)
-        table.setPopupOptions(
+        self.tableL = AFXTable(vf, 6, 3, 6, 3, form.keyword82Kw, 0, AFXTABLE_EDITABLE | LAYOUT_FILL_X)
+        self.tableL.setPopupOptions(
             AFXTable.POPUP_CUT | AFXTable.POPUP_COPY | AFXTable.POPUP_PASTE | AFXTable.POPUP_INSERT_ROW | AFXTable.POPUP_DELETE_ROW | AFXTable.POPUP_CLEAR_CONTENTS | AFXTable.POPUP_READ_FROM_FILE | AFXTable.POPUP_WRITE_TO_FILE)
-        table.setLeadingRows(1)
-        table.setLeadingColumns(1)
-        table.setColumnWidth(1, 200)
-        table.setColumnType(1, AFXTable.FLOAT)
-        table.setColumnWidth(2, 100)
-        table.setColumnType(2, AFXTable.FLOAT)
-        table.setLeadingRowLabels('Load (%NM%)\tAmp')
-        table.setStretchableColumn(table.getNumColumns() - 1)
-        table.showHorizontalGrid(True)
-        table.showVerticalGrid(True)
+        self.tableL.setLeadingRows(1)
+        self.tableL.setLeadingColumns(1)
+        self.tableL.setColumnWidth(1, 200)
+        self.tableL.setColumnType(1, AFXTable.FLOAT)
+        self.tableL.setColumnWidth(2, 100)
+        self.tableL.setColumnType(2, AFXTable.FLOAT)
+        self.tableL.setLeadingRowLabels('Load (%NM%)\tAmp')
+        self.tableL.setStretchableColumn(table.getNumColumns() - 1)
+        self.tableL.showHorizontalGrid(True)
+        self.tableL.showVerticalGrid(True)
         if self.STRESSList:
             try:
                 for i in range(len(self.STRESSList)):
-                    if i >= table.getNumRows() - 1: # 如果需要更多行
-                        table.insertRows(table.getNumRows(), 1) # 在末尾插入新行
-                    table.setItemText(i + 1, 1, str(self.STRESSList[i]))
-                    table.setItemText(i + 1, 2, '%OP%_%NM%')
+                    if i >= self.tableL.getNumRows() - 1: # 如果需要更多行
+                        self.tableL.insertRows(table.getNumRows(), 1) # 在末尾插入新行
+                    self.tableL.setItemText(i + 1, 1, str(self.STRESSList[i]))
+                    self.tableL.setItemText(i + 1, 2, '%OP%_%NM%')
             except Exception as e:
                 print("Error filling table:", str(e))
 
@@ -1311,7 +1311,7 @@ class STPM_test1033DB(AFXDataDialog):
             # 第三列
             table.setItemText(i + 1, 3, '0')
             # 第四列
-            table.setItemText(i + 1, 4, item)
+            table.setItemText(i + 1, 4, str(i + 1))
             # 第五列
             table.setItemText(i + 1, 5, '-1')
         # 更新表格显示
@@ -1375,7 +1375,54 @@ class STPM_test1033DB(AFXDataDialog):
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea("Error in onTabChanged: " + str(e))
-
+    def onCombineCommand(self, sender, sel, ptr):
+        def getTableData(table):
+            num_rows = table.getNumRows()
+            num_cols = table.getNumColumns()
+            tabledata = []
+            for row in range(0, num_rows):  
+                row_data = []
+                for col in range(0, num_cols):  # 列从1到num_cols
+                    value = table.getItemText(row, col)
+                    if value.strip():
+                        row_data.append(value)
+                if row_data:
+                    tabledata.append(tuple(row_data))
+            return tabledata
+        importedODBName=getInput('请输入odb文件名')
+        if self.TabBook_5.getCurrent()==0:
+            table=self.tableH
+        elif self.TabBook_5.getCurrent()==1:
+            table=self.tableL
+            tableF=self.table1
+            tableFdata=getTableData(tableF)
+        tabledata=getTableData(table)
+        self.callkernelCombine(
+            tabledata=tuple(tabledata),
+            bstep=self.form.keyword92Kw.getValue().split(',') if self.form.keyword92Kw.getValue() else [],
+            csteplist=self.form.keyword80Kw.getValue().split(',') if self.form.keyword80Kw.getValue() else [],
+            astep=self.form.keyword93Kw.getValue().split(',') if self.form.keyword93Kw.getValue() else [],
+            cyctimes=self.form.keyword81Kw.getValue(),
+            fieldData=tuple(tableFdata),
+            importedODBName=importedODBName,)
+        return 1
+    def callkernelCombine(tabledata,bstep,csteplist,cyctimes,astep,
+      fieldData,importedODBName,lossDefaultStrategy='Propagated',preFieldname='ImportedTemperature'):
+        cmds=("""
+import AmpPair
+AmpPair.kernelCombine(
+    tabledata={},
+    bstep={},
+    csteplist={},
+    cyctimes={},
+    astep={},
+    lossDefaultStrategy='{}',
+    fieldData={},
+    preFieldname='{}',
+    importedODBName='{}',
+    )""".format(tabledata,bstep,csteplist,cyctimes,astep,lossDefaultStrategy,fieldData,preFieldname,importedODBName))
+        sendCommand(cmds)
+        pass
 
 
 # Class definition
