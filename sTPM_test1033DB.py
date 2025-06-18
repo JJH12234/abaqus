@@ -31,8 +31,9 @@ class STPM_test1033DB(AFXDataDialog):
         ID_CLICKED_LIST,
         ID_TEXT_CHANGED,
         ID_CYCLE_LIST_CHANGED,
-        ID_TAB_CHANGED
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 14)
+        ID_TAB_CHANGED,
+        ID_CLICKED_updateModel
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 15)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
 
@@ -139,7 +140,16 @@ class STPM_test1033DB(AFXDataDialog):
         fileName = os.path.join(thisDir, 'icon.png')
         icon = afxCreatePNGIcon(fileName)
         FXLabel(p=TabItem_22, text='', ic=icon)
-        button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        updateBtn = FXButton(p=TabItem_22,
+                     text=u'更新模型尺寸'.encode('GB18030'),
+                     ic=None,
+                     tgt=self,
+                     sel=self.ID_CLICKED_updateModel,
+                     opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        updateBtn.setTarget(self)
+        updateBtn.setSelector(self.ID_CLICKED_updateModel)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_updateModel, STPM_test1033DB.onUpdateModelClicked)
+        # button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
         tabItem = FXTabItem(p=TabBook_1, text=u'材料'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_16 = FXVerticalFrame(p=TabBook_1,
@@ -954,6 +964,34 @@ class STPM_test1033DB(AFXDataDialog):
             mw.writeToMessageArea("Error displaying data: " + str(e))
         
         return jsondata
+
+    def onUpdateModelClicked(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+
+        excel_path = self.fileNameKw.getValue().strip()
+        if not excel_path:
+            showAFXErrorDialog(mw, u"请先指定 Excel 文件路径")
+            return
+        if not os.path.exists(excel_path):
+            showAFXErrorDialog(mw, u"文件不存在：\n" + excel_path)
+            return
+
+        # 若插件目录不在 sys.path，可插入；若已在，可省略
+        plugin_dir = os.path.dirname(__file__).replace('\\', '\\\\')
+
+        cmd = (
+            "import sys, os\n"
+            "sys.path.insert(0, r'{plugin_dir}')\n"
+            "import Parametric_modeling as pm\n"
+            "pm.pre_paraModeling_main(r'{xls}')\n"
+        ).format(plugin_dir=plugin_dir, xls=excel_path.replace('\\', '\\\\'))
+
+        sendCommand(cmd)
+
+        mw.writeToMessageArea(
+            (u"模型尺寸已根据 {} 更新完毕\n"
+            .format(os.path.basename(excel_path))).encode('GB18030'))
+
 
     def onImport1Clicked(self, sender, sel, ptr):
         """处理import1按钮点击事件"""
