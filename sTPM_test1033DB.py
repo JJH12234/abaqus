@@ -31,8 +31,10 @@ class STPM_test1033DB(AFXDataDialog):
         ID_CLICKED_LIST,
         ID_TEXT_CHANGED,
         ID_CYCLE_LIST_CHANGED,
-        ID_TAB_CHANGED
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 14)
+        ID_TAB_CHANGED,
+        ID_CLICKED_importfuzhi,
+        ID_CLICKED_createstep
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 16)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
 
@@ -294,9 +296,14 @@ class STPM_test1033DB(AFXDataDialog):
             FXVerticalSeparator(p=TabItem_6, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         else:
             FXHorizontalSeparator(p=TabItem_6, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
-        run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=fileHandler,
-                        sel=AFXMode.ID_ACTIVATE + 1,
+        # run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=fileHandler,
+        #                 sel=AFXMode.ID_ACTIVATE + 1,
+        #                 opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        # 幅值界面修改
+        run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=self,
+                        sel=self.ID_CLICKED_importfuzhi,
                         opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_importfuzhi,STPM_test1033DB.Clicked_amplitude)
         # l = FXLabel(p=TabItem_6, text='Button: Run', opts=JUSTIFY_LEFT)
         l.setFont(getAFXFont(FONT_BOLD))
         HFrame_10 = FXHorizontalFrame(p=TabItem_6, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
@@ -412,9 +419,14 @@ class STPM_test1033DB(AFXDataDialog):
         ComboBox_13.appendItem(text='StaticStep')
         ComboBox_13.appendItem(text='ViscoStep')
         ComboBox_13.appendItem(text='HeatTransferStep')
-        createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
-                              sel=AFXMode.ID_ACTIVATE + 1,
+        # createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
+        #                       sel=AFXMode.ID_ACTIVATE + 1,
+        #                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        # 创建分析步按钮修改
+        createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=self,
+                              sel=self.ID_CLICKED_createstep,
                               opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_createstep,STPM_test1033DB.Createstep)
         # l = FXLabel(p=VFrame_17, text='Button: creat step', opts=JUSTIFY_LEFT)
         if isinstance(TabItem_5, FXHorizontalFrame):
             FXVerticalSeparator(p=TabItem_5, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
@@ -954,7 +966,6 @@ class STPM_test1033DB(AFXDataDialog):
             mw.writeToMessageArea("Error displaying data: " + str(e))
         
         return jsondata
-
     def onImport1Clicked(self, sender, sel, ptr):
         """处理import1按钮点击事件"""
         try:
@@ -976,7 +987,7 @@ class STPM_test1033DB(AFXDataDialog):
             cur_item = self.ComboBox_15.getCurrentItem()
             combo_value = self.ComboBox_15.getItemText(cur_item)
             if combo_value == "New":
-            # 选择了“New”才用文本框
+            # 选择了"New"才用文本框
                 aimMaterialName = self.newMaterialText.getText().strip()
                 if not aimMaterialName:
                     showAFXErrorDialog(mw, "Please input a new material name.")
@@ -1049,8 +1060,89 @@ class STPM_test1033DB(AFXDataDialog):
             error_trace = str(traceback.format_exc())
             mw.writeToMessageArea("Detailed error information: " + error_trace)
 
-
+    def Clicked_amplitude(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea("Starting amplitude import...")
+        # 获取文件路径
+        file_path = self.form.InputDataNameKw.getValue()
+        
+        # 检查文件路径是否存在
+        if not file_path:
+            mw.writeToMessageArea("Error: No file selected")
+            return
+        
+        # 构建命令并执行
+        try:
+            cmds=("import fuzhijiemian\n"
+                  "fuzhijiemian.pre_ampTableChange('{}','%OP%_%TT%')\n".format(file_path))
+            sendCommand(cmds)
+            # 导入成功后显示消息
+            mw.writeToMessageArea(u"幅值表导入成功，请查看消息区域获取详细信息".encode('GB18030'))
+        except Exception as e:
+            mw.writeToMessageArea(u"导入幅值表时出错: {}".format(str(e)).encode('GB18030'))
     
+    def Createstep(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea(u"开始创建分析步...".encode('GB18030'))
+        
+        try:
+            # 获取界面中的参数
+            bstep_text = self.form.keyword68Kw.getValue()
+            csteplist_text = self.form.keyword65Kw.getValue()
+            astep_text = self.form.keyword69Kw.getValue()
+            cyctimes = int(self.form.keyword77Kw.getValue())
+            modeltype = str(self.form.keyword90Kw.getValue())
+            
+            # 解析步骤列表
+            bstep = [x.strip() for x in bstep_text.split(',')] if bstep_text.strip() else []
+            csteplist = [x.strip() for x in csteplist_text.split(',')] if csteplist_text.strip() else []
+            astep = [x.strip() for x in astep_text.split(',')] if astep_text.strip() else []
+            
+            # 检查必要参数
+            if not csteplist:
+                mw.writeToMessageArea(u"错误: 循环分析步不能为空".encode('GB18030'))
+                return
+                
+            # 创建步长字典
+            steptimepair = {'*': 1.0}  # 默认值
+            
+            # # 添加HOLDING步长（如果有指定）
+            # holding_time = self.form.keyword94Kw.getValue()
+            # if holding_time and holding_time.strip():
+            #     try:
+            #         steptimepair['HOLDING'] = float(holding_time)
+            #     except ValueError:
+            #         mw.writeToMessageArea(u"警告: HOLDING步长格式不正确，将使用默认值".encode('GB18030'))
+            #         steptimepair['HOLDING'] = 20.0*365*24*3600  # 默认20年
+            # else:
+            #     steptimepair['HOLDING'] = 20.0*365*24*3600  # 默认20年
+                
+            # # 为csteplist中的每个步骤设置默认步长
+            # for step in csteplist:
+            #     if step not in steptimepair:
+            #         steptimepair[step] = 1.0
+                    
+            # # 为bstep和astep中的每个步骤设置默认步长
+            # for step in bstep + astep:
+            #     if step not in steptimepair:
+            #         steptimepair[step] = 1.0
+            
+            # 获取创建标志
+            creatFlag = 'REPLACE' if self.form.HFrame33Kw1.getValue() == 59 else 'NEW'
+            
+            # 调用pre_stepBuild函数
+            cmds=("import fenxibu\n"
+                  "fenxibu.pre_stepBuild({},{},{},{},{},'{}','{}')\n".format(bstep, csteplist, steptimepair, astep, cyctimes, modeltype, creatFlag))
+            sendCommand(cmds)
+            
+            mw.writeToMessageArea(u"分析步创建成功!".encode('GB18030'))
+            
+        except Exception as e:
+            mw.writeToMessageArea(u"创建分析步时出错: '{}'".format(unicode(str(e), 'utf-8', errors='replace')).encode('GB18030'))
+            import traceback
+            error_trace = traceback.format_exc()
+            mw.writeToMessageArea(error_trace)
+
     def onMaterialChanged(self, sender, sel, ptr):
         selected_material = self.ComboBox_12.getItemText(self.ComboBox_12.getCurrentItem())
         self.updateTree(selected_material)
