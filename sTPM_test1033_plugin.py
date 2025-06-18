@@ -36,6 +36,7 @@ class STPM_test1033_plugin(AFXForm):
         self.keyword100Kw = AFXStringKeyword(self.cmd, 'keyword100', True, '')
         self.keyword61Kw = AFXIntKeyword(self.cmd, 'keyword61', True, 4)
         self.keyword62Kw = AFXIntKeyword(self.cmd, 'keyword62', True, 4)
+        self.temperatureFieldKw = AFXStringKeyword(self.cmd, 'temperatureField', True, '')
         if not self.radioButtonGroups.has_key('DataXYType'):
             self.DataXYTypeKw1 = AFXIntKeyword(None, 'DataXYTypeDummy', True)
             self.DataXYTypeKw2 = AFXStringKeyword(self.cmd, 'DataXYType', True)

@@ -15,7 +15,7 @@ def get_current_model():
     modelname=session.sessionState[viewport]['modelName']
     if 'Model-0' in modelname:
         flag=getWarningReply(
-            'WARRNING: Edit Model-0 is not recommanded for user!\n YES-continue; No-copyNew;', (YES,NO,CANCEL))
+            u'警告：不建议用户自行编辑Model-0 \n YES以继续; No以复制;'.encode('GB18030'), (YES,NO,CANCEL))
     if flag==NO:
         newname=modelname.replace('Model-0','NewModel')
         if newname in mdb.models.keys():
@@ -27,7 +27,9 @@ def get_current_model():
         return mdb.models[newname]
     elif flag==CANCEL:
         raise Exception('User Cancels when edit {mm}'.format(mm=modelname))
-        return mdb.models[modelname]
+        # return mdb.models[modelname]
+    else:
+        pass
     return mdb.models[modelname]
 def fulllist(bstep, csteplist, steptimepair, astep, cyctimes):
     all_steps=bstep+csteplist*cyctimes+astep
@@ -89,6 +91,7 @@ def pre_stepBuild(bstep, csteplist, steptimepair, astep, cyctimes, modeltype=Non
     n_existing = len(existing_steps)
     n_configs = len(configs)
     if creatFlag=='REPLACE':
+        refreshFlag=True#2025年6月19日测试
         ignoreStep=len(bstep)
         # 1. 先处理已有的步骤：依次对前 n_existing 个配置修改已有步骤
         for i in range(min(n_existing, n_configs)):
@@ -204,6 +207,8 @@ def refreshMdb(path,modelname):
         openMdb(pathName=path)
         viewport = session.currentViewportName
         session.viewports[viewport].setValues(displayedObject=mdb.models[modelname].rootAssembly)
+    else:
+        pass
 
 def pre_stepModify(stepnamelist,edittype,value):
     for step in stepnamelist:
@@ -262,7 +267,7 @@ def stepModifyMap(stepname,edittype,value):
             'timePeriod':value,
             # 'initialInc': timePeriod / 1000.0,
             'initialInc': 1.0,
-            'maxInc': timePeriod/ 20.0,
+            'maxInc': value/ 20.0,
             }
     elif edittype=='set Initial increment size':
         method=getattr(s,'setValues')

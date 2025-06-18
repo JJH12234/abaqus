@@ -112,17 +112,17 @@ class STPM_test1033DB(AFXDataDialog):
             AFXTable.POPUP_CUT | AFXTable.POPUP_COPY | AFXTable.POPUP_PASTE | AFXTable.POPUP_INSERT_ROW | AFXTable.POPUP_DELETE_ROW | AFXTable.POPUP_CLEAR_CONTENTS | AFXTable.POPUP_READ_FROM_FILE | AFXTable.POPUP_WRITE_TO_FILE)
         self.table.setLeadingRows(1)
         self.table.setLeadingColumns(1)
-        self.table.setColumnWidth(1, 200)
+        self.table.setColumnWidth(1, 100)
         self.table.setColumnType(1, AFXTable.TEXT)
-        self.table.setColumnWidth(2, 200)
+        self.table.setColumnWidth(2, 100)
         self.table.setColumnType(2, AFXTable.TEXT)
-        self.table.setColumnWidth(3, 200)
+        self.table.setColumnWidth(3, 100)
         self.table.setColumnType(3, AFXTable.TEXT)
-        self.table.setColumnWidth(4, 200)
+        self.table.setColumnWidth(4, 100)
         self.table.setColumnType(4, AFXTable.TEXT)
-        self.table.setColumnWidth(5, 200)
+        self.table.setColumnWidth(5, 100)
         self.table.setColumnType(5, AFXTable.TEXT)
-        self.table.setLeadingRowLabels('para\tvalue\ttype\tpart\tfeature')
+        self.table.setLeadingRowLabels(u'参数名\t参数值\t类型\t部件\t特征'.encode('GB18030'))
         self.table.setStretchableColumn(self.table.getNumColumns() - 1)
         self.table.showHorizontalGrid(True)
         self.table.showVerticalGrid(True)
@@ -313,6 +313,9 @@ class STPM_test1033DB(AFXDataDialog):
                         sel=AFXMode.ID_ACTIVATE + 1,
                         opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         # l = FXLabel(p=TabItem_6, text='Button: Run', opts=JUSTIFY_LEFT)
+        run2.setTarget(self)
+        run2.setSelector(self.ID_CLICKED_importfuzhi)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_importfuzhi, STPM_test1033DB.Clicked_amplitude)
         l.setFont(getAFXFont(FONT_BOLD))
         HFrame_10 = FXHorizontalFrame(p=TabItem_6, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                       pl=0, pr=0, pt=0, pb=0)
@@ -431,6 +434,9 @@ class STPM_test1033DB(AFXDataDialog):
                               sel=AFXMode.ID_ACTIVATE + 1,
                               opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         # l = FXLabel(p=VFrame_17, text='Button: creat step', opts=JUSTIFY_LEFT)
+        createstep.setTarget(self)
+        createstep.setSelector(self.ID_CLICKED_createstep)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_createstep, STPM_test1033DB.Createstep)
         if isinstance(TabItem_5, FXHorizontalFrame):
             FXVerticalSeparator(p=TabItem_5, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         else:
@@ -459,6 +465,8 @@ class STPM_test1033DB(AFXDataDialog):
         editstep = FXButton(p=GroupBox_23, text=u'修改分析步'.encode('GB18030'), ic=None, tgt=self,
                       sel=self.ID_CLICKED_modifystep,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        editstep.setTarget(self)
+        editstep.setSelector(self.ID_CLICKED_modifystep)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_modifystep,STPM_test1033DB.Modifystep)
         tabItem = FXTabItem(p=TabBook_1, text=u'载荷/换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
@@ -466,7 +474,7 @@ class STPM_test1033DB(AFXDataDialog):
                                     opts=FRAME_RAISED | FRAME_THICK | LAYOUT_FILL_X,
                                     x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
                                     pt=DEFAULT_SPACING, pb=DEFAULT_SPACING, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
-        GroupBox_26 = FXGroupBox(p=TabItem_7, text='Step List (%OP%)', opts=FRAME_GROOVE)
+        GroupBox_26 = FXGroupBox(p=TabItem_7, text=u'分析步(%OP%)'.encode('GB18030'), opts=FRAME_GROOVE)
         VAligner_11 = AFXVerticalAligner(p=GroupBox_26, opts=0, x=0, y=0, w=0, h=0,
                                          pl=0, pr=0, pt=0, pb=0)
         AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环前分析步:'.encode('GB18030'), tgt=form.keyword92Kw, sel=0)
@@ -478,6 +486,7 @@ class STPM_test1033DB(AFXDataDialog):
 
         AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环后分析步:'.encode('GB18030'), tgt=form.keyword93Kw, sel=0)
         AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环次数:'.encode('GB18030'), tgt=form.keyword81Kw, sel=0)
+        self.importOdbName=AFXTextField(p=TabItem_7, ncols=50, labelText=u'温度场结果:'.encode('GB18030'), tgt=form.temperatureFieldKw, sel=0)
         pairamp = FXButton(p=TabItem_7, text=u'匹配幅值表(当前标签页)'.encode('GB18030'), ic=None, tgt=self,
                       sel=self.ID_CLICKED_AmpPair,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
@@ -526,7 +535,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.tableH.setColumnType(2, AFXTable.TEXT)
         self.tableH.setColumnWidth(3, 200)
         self.tableH.setColumnType(3, AFXTable.TEXT)
-        self.tableH.setLeadingRowLabels('HTC (%NM%)\tAmpName\tTempName')
+        self.tableH.setLeadingRowLabels(u'膜条件(%NM%)\t换热幅值表\t温度幅值表'.encode('GB18030'))
         self.tableH.setStretchableColumn(self.tableH.getNumColumns() - 1)
         self.tableH.showHorizontalGrid(True)
         self.tableH.showVerticalGrid(True)
@@ -576,7 +585,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.tableL.setColumnType(1, AFXTable.FLOAT)
         self.tableL.setColumnWidth(2, 100)
         self.tableL.setColumnType(2, AFXTable.FLOAT)
-        self.tableL.setLeadingRowLabels('Load (%NM%)\tAmp')
+        self.tableL.setLeadingRowLabels(u'载荷(%NM%)\t幅值表'.encode('GB18030'))
         self.tableL.setStretchableColumn(self.tableL.getNumColumns() - 1)
         self.tableL.showHorizontalGrid(True)
         self.tableL.showVerticalGrid(True)
@@ -609,10 +618,11 @@ class STPM_test1033DB(AFXDataDialog):
         self.table1.setColumnType(4, AFXTable.FLOAT)
         self.table1.setColumnWidth(5, 100)
         self.table1.setColumnType(5, AFXTable.FLOAT)
-        self.table1.setLeadingRowLabels('Temperature field at OP\tstart Step\tstart Inc\tend Step\tend Inc')
+        self.table1.setLeadingRowLabels(u'预定义温度场（工况）\t开始分析步\t开始增量步\t结束分析步\t结束增量步\t步长\t最大增量步'.encode('GB18030'))
         self.table1.setStretchableColumn(self.table1.getNumColumns() - 1)
         self.table1.showHorizontalGrid(True)
         self.table1.showVerticalGrid(True)
+        ###子程序页面
         tabItem = FXTabItem(p=TabBook_1, text=u'子程序'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         tabItem.hide()
@@ -1090,21 +1100,21 @@ class STPM_test1033DB(AFXDataDialog):
         except Exception as e:
             # 导入失败时显示错误信息
             mw = getAFXApp().getAFXMainWindow()
-            mw.writeToMessageArea("Error: Exception occurred during material import - " + str(e))
+            mw.writeToMessageArea(u"错误: 材料导入失败 - {}".format(unicode(str(e), 'utf-8', errors='replace')).encode('GB18030'))
             # 打印更详细的错误信息
             import traceback
             error_trace = str(traceback.format_exc())
-            mw.writeToMessageArea("Detailed error information: " + error_trace)
+            mw.writeToMessageArea(u"详细错误信息: {}".format(unicode(error_trace, 'utf-8', errors='replace')).encode('GB18030'))
 
     def Clicked_amplitude(self, sender, sel, ptr):
         mw = getAFXApp().getAFXMainWindow()
-        mw.writeToMessageArea("Starting amplitude import...")
+        mw.writeToMessageArea(u"正在导入幅值表...".encode('GB18030'))
         # 获取文件路径
         file_path = self.form.InputDataNameKw.getValue()
         
         # 检查文件路径是否存在
         if not file_path:
-            mw.writeToMessageArea("Error: No file selected")
+            mw.writeToMessageArea(u"错误: 未选择文件".encode('GB18030'))
             return
         
         # 构建命令并执行
@@ -1486,6 +1496,7 @@ class STPM_test1033DB(AFXDataDialog):
         table.update()
 
     # ─── 仍然在 STPM_test1033DB 类体内，放在其他方法后面 ───
+    self.tab34flag=False
     def onMainTabChanged(self, sender, sel, ptr):
         try:
             if sender is None or not isinstance(sender, FXTabBook):
@@ -1498,6 +1509,13 @@ class STPM_test1033DB(AFXDataDialog):
                 self.form.keyword81Kw.setValue(self.form.keyword77Kw.getValue())   # cycle times
 
                 self.onTextChanged(None, None, None)
+                self.tab34flag=True
+            elif sender.getCurrent() == 3 and self.tab34flag:
+                self.tab34flag=False
+                self.form.keyword68Kw.setValue(self.form.keyword92Kw.getValue())   # before
+                self.form.keyword65Kw.setValue(self.form.keyword80Kw.getValue())   # composition
+                self.form.keyword69Kw.setValue(self.form.keyword93Kw.getValue())   # after
+                self.form.keyword77Kw.setValue(self.form.keyword81Kw.getValue())   # cycle times
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea(u'同步 Cycle.Loads&HTC 失败: {}'.format(e).encode('gb18030'))
@@ -1622,7 +1640,7 @@ class STPM_test1033DB(AFXDataDialog):
                         # 第三列
                         table.setItemText(i + 1, 3, '0')
                         # 第四列
-                        table.setItemText(i + 1, 4, item)
+                        table.setItemText(i + 1, 4, str(i + 1))
                         # 第五列
                         table.setItemText(i + 1, 5, '-1')
                     # 更新表格显示
@@ -1635,23 +1653,33 @@ class STPM_test1033DB(AFXDataDialog):
             num_rows = table.getNumRows()
             num_cols = table.getNumColumns()
             tabledata = []
-            for row in range(0, num_rows):  
+            for row in range(1, num_rows):  
                 row_data = []
-                for col in range(0, num_cols):  # 列从1到num_cols
+                for col in range(1, num_cols):  # 列从1到num_cols
                     value = table.getItemText(row, col)
                     if value.strip():
                         row_data.append(value)
                 if row_data:
                     tabledata.append(tuple(row_data))
             return tabledata
-        importedODBName=getInput('请输入odb文件名')
         if self.TabBook_5.getCurrent()==0:
             table=self.tableH
+            importedODBName=''
+            tableFdata=((),)
         elif self.TabBook_5.getCurrent()==1:
             table=self.tableL
             tableF=self.table1
             tableFdata=getTableData(tableF)
+            temp_odb = self.importOdbName.getText().strip()
+            if temp_odb:
+                if not temp_odb.endswith('.odb'):
+                    temp_odb += '.odb'
+                importedODBName = temp_odb
+            else:
+                importedODBName=''
         tabledata=getTableData(table)
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea(str(tuple(tabledata)))
         self.callkernelCombine(
             tabledata=tuple(tabledata),
             bstep=self.form.keyword92Kw.getValue().split(',') if self.form.keyword92Kw.getValue() else [],
@@ -1661,8 +1689,8 @@ class STPM_test1033DB(AFXDataDialog):
             fieldData=tuple(tableFdata),
             importedODBName=importedODBName,)
         return 1
-    def callkernelCombine(tabledata,bstep,csteplist,cyctimes,astep,
-      fieldData,importedODBName,lossDefaultStrategy='Propagated',preFieldname='ImportedTemperature'):
+    def callkernelCombine(self, tabledata, bstep, csteplist, cyctimes, astep,
+      fieldData,importedODBName='',lossDefaultStrategy='Propagated',preFieldname='ImportedTemperature'):
         cmds=("""
 import AmpPair
 AmpPair.kernelCombine(
@@ -1902,8 +1930,8 @@ class InputFileHandler(FXObject):
             
             # 添加HOLDING项
             list.appendItem(text='HOLDING')
-            steptimepair['HOLDING'] = 20.0*365*24*3600  # 默认20年
-            steptimepair['*'] = 1.0  # 添加默认值
+            steptimepair.setdefault('HOLDING', 20.0*365*24*3600)  # 默认20年    
+            steptimepair.setdefault('*', 1.0)  # 添加默认值
             
             # 输出完整的steptimepair字典
             # mw.writeToMessageArea(u'步长字典: {}'.format(steptimepair).encode('GB18030'))
