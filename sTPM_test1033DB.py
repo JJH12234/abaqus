@@ -49,6 +49,7 @@ class STPM_test1033DB(AFXDataDialog):
         self.steptimepair = {}
         self.form = form
         self.temp_json = {}  # 添加临时JSON存储
+        self.tab34flag=False
         # okBtn = self.getActionButton(self.ID_CLICKED_OK)
         # okBtn.setText('OK')
 
@@ -1496,7 +1497,6 @@ class STPM_test1033DB(AFXDataDialog):
         table.update()
 
     # ─── 仍然在 STPM_test1033DB 类体内，放在其他方法后面 ───
-    self.tab34flag=False
     def onMainTabChanged(self, sender, sel, ptr):
         try:
             if sender is None or not isinstance(sender, FXTabBook):
