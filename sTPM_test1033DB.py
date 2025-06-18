@@ -31,8 +31,12 @@ class STPM_test1033DB(AFXDataDialog):
         ID_CLICKED_LIST,
         ID_TEXT_CHANGED,
         ID_CYCLE_LIST_CHANGED,
-        ID_TAB_CHANGED
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 14)
+        ID_TAB_CHANGED,
+        ID_CLICKED_importfuzhi,
+        ID_CLICKED_createstep,
+        ID_CLICKED_modifystep,
+        ID_CLICKED_updateModel
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 18)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
 
@@ -41,6 +45,7 @@ class STPM_test1033DB(AFXDataDialog):
         AFXDataDialog.__init__(self, form, 'STPM_GB_Before',)
                                # self.OK | self.CANCEL, )
         self.materials_data = {}
+        self.steptimepair = {}
         self.form = form
         self.temp_json = {}  # 添加临时JSON存储
         # okBtn = self.getActionButton(self.ID_CLICKED_OK)
@@ -139,7 +144,16 @@ class STPM_test1033DB(AFXDataDialog):
         fileName = os.path.join(thisDir, 'icon.png')
         icon = afxCreatePNGIcon(fileName)
         FXLabel(p=TabItem_22, text='', ic=icon)
-        button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        updateBtn = FXButton(p=TabItem_22,
+                     text=u'更新模型尺寸'.encode('GB18030'),
+                     ic=None,
+                     tgt=self,
+                     sel=self.ID_CLICKED_updateModel,
+                     opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        updateBtn.setTarget(self)
+        updateBtn.setSelector(self.ID_CLICKED_updateModel)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_updateModel, STPM_test1033DB.onUpdateModelClicked)
+        # button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
         tabItem = FXTabItem(p=TabBook_1, text=u'材料'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_16 = FXVerticalFrame(p=TabBook_1,
@@ -441,9 +455,10 @@ class STPM_test1033DB(AFXDataDialog):
         ComboBox_11.appendItem(text='enable Restart')
         AFXTextField(p=HFrame_35, ncols=12, labelText=u' 值:'.encode('GB18030'), tgt=form.keyword74Kw, sel=0)
         # l = FXLabel(p=GroupBox_23, text='Button: modify step', opts=JUSTIFY_LEFT)
-        editstep = FXButton(p=GroupBox_23, text=u'修改分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
-                      sel=AFXMode.ID_ACTIVATE + 1,
+        editstep = FXButton(p=GroupBox_23, text=u'修改分析步'.encode('GB18030'), ic=None, tgt=self,
+                      sel=self.ID_CLICKED_modifystep,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_modifystep,STPM_test1033DB.Modifystep)
         tabItem = FXTabItem(p=TabBook_1, text=u'载荷/换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_7 = FXVerticalFrame(p=TabBook_1,
@@ -955,6 +970,34 @@ class STPM_test1033DB(AFXDataDialog):
         
         return jsondata
 
+    def onUpdateModelClicked(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+
+        excel_path = self.fileNameKw.getValue().strip()
+        if not excel_path:
+            showAFXErrorDialog(mw, u"请先指定 Excel 文件路径")
+            return
+        if not os.path.exists(excel_path):
+            showAFXErrorDialog(mw, u"文件不存在：\n" + excel_path)
+            return
+
+        # 若插件目录不在 sys.path，可插入；若已在，可省略
+        plugin_dir = os.path.dirname(__file__).replace('\\', '\\\\')
+
+        cmd = (
+            "import sys, os\n"
+            "sys.path.insert(0, r'{plugin_dir}')\n"
+            "import Parametric_modeling as pm\n"
+            "pm.pre_paraModeling_main(r'{xls}')\n"
+        ).format(plugin_dir=plugin_dir, xls=excel_path.replace('\\', '\\\\'))
+
+        sendCommand(cmd)
+
+        mw.writeToMessageArea(
+            (u"模型尺寸已根据 {} 更新完毕\n"
+            .format(os.path.basename(excel_path))).encode('GB18030'))
+
+
     def onImport1Clicked(self, sender, sel, ptr):
         """处理import1按钮点击事件"""
         try:
@@ -1049,8 +1092,215 @@ class STPM_test1033DB(AFXDataDialog):
             error_trace = str(traceback.format_exc())
             mw.writeToMessageArea("Detailed error information: " + error_trace)
 
-
+    def Clicked_amplitude(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea("Starting amplitude import...")
+        # 获取文件路径
+        file_path = self.form.InputDataNameKw.getValue()
+        
+        # 检查文件路径是否存在
+        if not file_path:
+            mw.writeToMessageArea("Error: No file selected")
+            return
+        
+        # 构建命令并执行
+        try:
+            cmds=("import fuzhijiemian\n"
+                  "fuzhijiemian.pre_ampTableChange('{}','%OP%_%TT%')\n".format(file_path))
+            sendCommand(cmds)
+            # 导入成功后显示消息
+            mw.writeToMessageArea(u"幅值表导入成功，请查看消息区域获取详细信息".encode('GB18030'))
+        except Exception as e:
+            mw.writeToMessageArea(u"导入幅值表时出错: {}".format(unicode(str(e), 'utf-8', errors='replace')).encode('GB18030'))
     
+    def Createstep(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea(u"开始创建分析步...".encode('GB18030'))
+        
+        try:
+            # 获取界面中的参数
+            bstep_text = self.form.keyword68Kw.getValue()
+            csteplist_text = self.form.keyword65Kw.getValue()
+            astep_text = self.form.keyword69Kw.getValue()
+            cyctimes = int(self.form.keyword77Kw.getValue())
+            modeltype = str(self.form.keyword90Kw.getValue())
+            
+            # 解析步骤列表
+            bstep = [x.strip() for x in bstep_text.split(',')] if bstep_text.strip() else []
+            csteplist = [x.strip() for x in csteplist_text.split(',')] if csteplist_text.strip() else []
+            astep = [x.strip() for x in astep_text.split(',')] if astep_text.strip() else []
+            
+            # 检查必要参数
+            if not csteplist:
+                mw.writeToMessageArea(u"错误: 循环分析步不能为空".encode('GB18030'))
+                return
+                
+            # 创建步长字典
+            steptimepair = self.steptimepair
+            steptimepair['HOLDING'] = self.form.keyword94Kw.getValue()
+            mw.writeToMessageArea(u'步长字典: {}'.format(steptimepair).encode('GB18030'))
+            # {
+            #     'G5':107600.0,
+            #     'Steady':480000.0,
+            #     'G6':3000.0,
+            #     'G13':4500.0,
+            #     'G9':18000.0,
+            #     'HOLDING':20.0*365*24*3600,
+            #     '*': 1.0#缺省值
+            #     }  # 默认值
+            
+            # # 添加HOLDING步长（如果有指定）
+            # holding_time = self.form.keyword94Kw.getValue()
+            # if holding_time and holding_time.strip():
+            #     try:
+            #         steptimepair['HOLDING'] = float(holding_time)
+            #     except ValueError:
+            #         mw.writeToMessageArea(u"警告: HOLDING步长格式不正确，将使用默认值".encode('GB18030'))
+            #         steptimepair['HOLDING'] = 20.0*365*24*3600  # 默认20年
+            # else:
+            #     steptimepair['HOLDING'] = 20.0*365*24*3600  # 默认20年
+                
+            # # 为csteplist中的每个步骤设置默认步长
+            # for step in csteplist:
+            #     if step not in steptimepair:
+            #         steptimepair[step] = 1.0
+                    
+            # # 为bstep和astep中的每个步骤设置默认步长
+            # for step in bstep + astep:
+            #     if step not in steptimepair:
+            #         steptimepair[step] = 1.0
+            
+            # 获取创建标志
+            creatFlag = 'REPLACE' if self.form.HFrame33Kw1.getValue() == 59 else 'NEW'
+            
+            # 调用pre_stepBuild函数
+            cmds=("import fenxibu\n"
+                  "fenxibu.pre_stepBuild({},{},{},{},{},'{}','{}')\n".format(bstep, csteplist, steptimepair, astep, cyctimes, modeltype, creatFlag))
+            sendCommand(cmds)
+            
+            mw.writeToMessageArea(u"分析步创建成功!".encode('GB18030'))
+
+        except Exception as e:
+            mw.writeToMessageArea(u"创建分析步时出错: '{}'".format(unicode(str(e), 'utf-8', errors='replace')).encode('GB18030'))
+            import traceback
+            error_trace = traceback.format_exc()
+            mw.writeToMessageArea(error_trace)
+
+    def Modifystep(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea(u"开始修改分析步...".encode('GB18030'))
+        
+        try:
+            # 获取当前模型
+            m = self.get_current_model()
+            if not m:
+                mw.writeToMessageArea(u"错误: 未找到当前模型".encode('GB18030'))
+                return
+                
+            # 获取所有分析步
+            all_steps = list(m.steps.keys())
+            if not all_steps:
+                mw.writeToMessageArea(u"错误: 当前模型没有分析步".encode('GB18030'))
+                return
+                
+            # 获取单选框选择
+            radio_selection = self.form.GroupBox23Kw1.getValue()
+            
+            # 获取界面中的其他参数
+            edittype = self.form.keyword70Kw.getValue()  # 方法
+            value = self.form.keyword74Kw.getValue()     # 值
+            
+            # 根据单选框选择筛选分析步
+            filtered_steps = []
+            
+            if radio_selection == 60:  # 第一个单选框 - 对名字中含有...的分析步
+                filter_text = self.form.keyword72Kw.getValue()
+                if not filter_text:
+                    mw.writeToMessageArea(u"警告: 未指定筛选文本，将修改所有分析步".encode('GB18030'))
+                    filtered_steps = all_steps
+                else:
+                    # 筛选包含指定文本的分析步
+                    filtered_steps = [step for step in all_steps if filter_text in step]
+                    mw.writeToMessageArea(u"根据文本 '{}' 筛选出 {} 个分析步".format(
+                        filter_text, len(filtered_steps)).encode('GB18030'))
+            
+            elif radio_selection == 61:  # 第二个单选框 - 对于从i开始每n的分析步(n,i)
+                pattern_text = self.form.keyword73Kw.getValue()
+                if not pattern_text:
+                    mw.writeToMessageArea(u"错误: 未指定 n,i 格式".encode('GB18030'))
+                    return
+                    
+                try:
+                    parts = pattern_text.split(',')
+                    if len(parts) < 2:
+                        mw.writeToMessageArea(u"错误: 格式应为 'n,i'".encode('GB18030'))
+                        return
+                        
+                    n = int(parts[0].strip())  # 每n个
+                    i = int(parts[1].strip())  # 从i开始
+                    
+                    if i < 1:
+                        i = 1  # 确保i至少为1
+                        
+                    # 按照从i开始每n个的方式筛选
+                    filtered_steps = []
+                    for idx, step in enumerate(all_steps, 1):  # 从1开始计数
+                        if (idx - i) % n == 0 and idx >= i:
+                            filtered_steps.append(step)
+                    
+                    mw.writeToMessageArea(u"从第{}个开始每{}个分析步，筛选出{}个分析步".format(
+                        i, n, len(filtered_steps)).encode('GB18030'))
+                        
+                except ValueError:
+                    mw.writeToMessageArea(u"错误: n,i 必须是整数".encode('GB18030'))
+                    return
+            else:
+                # 未选择任何筛选方式，使用所有分析步
+                filtered_steps = all_steps
+                mw.writeToMessageArea(u"未指定筛选方式，将修改所有分析步".encode('GB18030'))
+            
+            # 检查筛选结果
+            if not filtered_steps:
+                mw.writeToMessageArea(u"警告: 筛选后没有分析步符合条件".encode('GB18030'))
+                return
+                
+            # 检查编辑类型和值
+            if not edittype:
+                mw.writeToMessageArea(u"错误: 请选择修改方法".encode('GB18030'))
+                return
+                
+            # 构建步骤名称列表字符串
+            step_names_str = "[" + ",".join(["'{}'".format(step) for step in filtered_steps]) + "]"
+            
+            # 确保值是正确格式
+            if value.isdigit() or (value and value[0] == '-' and value[1:].isdigit()):
+                value_str = value  # 数字值不加引号
+            else:
+                try:
+                    float_val = float(value)
+                    value_str = str(float_val)  # 浮点数值不加引号
+                except ValueError:
+                    value_str = "'{}'".format(value)  # 字符串值加引号
+            
+            # 构建命令
+            cmds = ("import fenxibu\n"
+                   "fenxibu.pre_stepModify({}, '{}', {})\n".format(
+                       step_names_str, edittype, value_str))
+            
+            # 调试输出命令
+            mw.writeToMessageArea(u"执行命令: {}".format(cmds).encode('GB18030'))
+            
+            # 执行命令
+            sendCommand(cmds)
+            
+            mw.writeToMessageArea(u"分析步修改成功!".encode('GB18030'))
+            
+        except Exception as e:
+            mw.writeToMessageArea(u"修改分析步时出错: '{}'".format(unicode(str(e), 'utf-8', errors='replace')).encode('GB18030'))
+            import traceback
+            error_trace = traceback.format_exc()
+            mw.writeToMessageArea(error_trace)
+
     def onMaterialChanged(self, sender, sel, ptr):
         selected_material = self.ComboBox_12.getItemText(self.ComboBox_12.getCurrentItem())
         self.updateTree(selected_material)
@@ -1331,6 +1581,7 @@ class STPM_test1033DB(AFXDataDialog):
 
     def getList3(self):
         return self.List_3
+
 
     def getTable1(self):
         return self.table1
@@ -1614,6 +1865,8 @@ class InputFileHandler(FXObject):
         mw = getAFXApp().getAFXMainWindow()
         mw.writeToMessageArea('Selected file path: ' + str(selectedFilePath))
         list = self.db.getList3()
+        self.db.steptimepair={}
+        steptimepair = self.db.steptimepair
         try:
             # 读取 Excel 文件
             workbook = xlrd.open_workbook(selectedFilePath)
@@ -1623,10 +1876,33 @@ class InputFileHandler(FXObject):
             # 清空 List_3 的内容
             if list:
                 list.clearItems()
-
+            
+            # 遍历每个sheet，获取第一列最后一行的数值
             for sheet_name in sheet_names:
+                sheet = workbook.sheet_by_name(sheet_name)
+                if sheet.nrows > 0:  # 确保sheet不为空
+                    # 获取第一列最后一行的值
+                    last_row_value = sheet.cell_value(sheet.nrows-1, 0)
+                    # 尝试将值转换为浮点数
+                    try:
+                        last_row_value = float(last_row_value)
+                    except (ValueError, TypeError):
+                        last_row_value = 1.0  # 如果转换失败，设置默认值
+                    
+                    # 将sheet名和值添加到steptimepair字典
+                    steptimepair[sheet_name] = last_row_value
+                    mw.writeToMessageArea(u'添加步长: {} = {}'.format(sheet_name, last_row_value).encode('GB18030'))
+                
+                # 添加到列表显示
                 list.appendItem(text=str(sheet_name))
+            
+            # 添加HOLDING项
             list.appendItem(text='HOLDING')
+            steptimepair['HOLDING'] = 20.0*365*24*3600  # 默认20年
+            steptimepair['*'] = 1.0  # 添加默认值
+            
+            # 输出完整的steptimepair字典
+            # mw.writeToMessageArea(u'步长字典: {}'.format(steptimepair).encode('GB18030'))
 
         except Exception as e:
             mw.writeToMessageArea("Error reading Excel file: " + str(e))

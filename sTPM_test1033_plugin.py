@@ -143,7 +143,7 @@ class STPM_test1033_plugin(AFXForm):
     def getFirstDialog(self):
 
         import sTPM_test1033DB
-        # reload(sTPM_test1033DB)
+        reload(sTPM_test1033DB)
         return sTPM_test1033DB.STPM_test1033DB(self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
