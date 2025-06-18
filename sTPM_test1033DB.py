@@ -143,7 +143,16 @@ class STPM_test1033DB(AFXDataDialog):
         fileName = os.path.join(thisDir, 'icon.png')
         icon = afxCreatePNGIcon(fileName)
         FXLabel(p=TabItem_22, text='', ic=icon)
-        button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        updateBtn = FXButton(p=TabItem_22,
+                     text=u'更新模型尺寸'.encode('GB18030'),
+                     ic=None,
+                     tgt=self,
+                     sel=self.ID_CLICKED_updateModel,
+                     opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        updateBtn.setTarget(self)
+        updateBtn.setSelector(self.ID_CLICKED_updateModel)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_updateModel, STPM_test1033DB.onUpdateModelClicked)
+        # button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
         tabItem = FXTabItem(p=TabBook_1, text=u'材料'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_16 = FXVerticalFrame(p=TabBook_1,
@@ -298,14 +307,9 @@ class STPM_test1033DB(AFXDataDialog):
             FXVerticalSeparator(p=TabItem_6, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         else:
             FXHorizontalSeparator(p=TabItem_6, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
-        # run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=fileHandler,
-        #                 sel=AFXMode.ID_ACTIVATE + 1,
-        #                 opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
-        # 幅值界面修改
-        run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=self,
-                        sel=self.ID_CLICKED_importfuzhi,
+        run2 = FXButton(p=TabItem_6, text=u'导入幅值表'.encode('GB18030'), ic=None, tgt=fileHandler,
+                        sel=AFXMode.ID_ACTIVATE + 1,
                         opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_importfuzhi,STPM_test1033DB.Clicked_amplitude)
         # l = FXLabel(p=TabItem_6, text='Button: Run', opts=JUSTIFY_LEFT)
         l.setFont(getAFXFont(FONT_BOLD))
         HFrame_10 = FXHorizontalFrame(p=TabItem_6, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
@@ -421,14 +425,9 @@ class STPM_test1033DB(AFXDataDialog):
         ComboBox_13.appendItem(text='StaticStep')
         ComboBox_13.appendItem(text='ViscoStep')
         ComboBox_13.appendItem(text='HeatTransferStep')
-        # createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
-        #                       sel=AFXMode.ID_ACTIVATE + 1,
-        #                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
-        # 创建分析步按钮修改
-        createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=self,
-                              sel=self.ID_CLICKED_createstep,
+        createstep = FXButton(p=VFrame_17, text=u'创建分析步'.encode('GB18030'), ic=None, tgt=fileHandler,
+                              sel=AFXMode.ID_ACTIVATE + 1,
                               opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_createstep,STPM_test1033DB.Createstep)
         # l = FXLabel(p=VFrame_17, text='Button: creat step', opts=JUSTIFY_LEFT)
         if isinstance(TabItem_5, FXHorizontalFrame):
             FXVerticalSeparator(p=TabItem_5, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
@@ -969,6 +968,35 @@ class STPM_test1033DB(AFXDataDialog):
             mw.writeToMessageArea("Error displaying data: " + str(e))
         
         return jsondata
+
+    def onUpdateModelClicked(self, sender, sel, ptr):
+        mw = getAFXApp().getAFXMainWindow()
+
+        excel_path = self.fileNameKw.getValue().strip()
+        if not excel_path:
+            showAFXErrorDialog(mw, u"请先指定 Excel 文件路径")
+            return
+        if not os.path.exists(excel_path):
+            showAFXErrorDialog(mw, u"文件不存在：\n" + excel_path)
+            return
+
+        # 若插件目录不在 sys.path，可插入；若已在，可省略
+        plugin_dir = os.path.dirname(__file__).replace('\\', '\\\\')
+
+        cmd = (
+            "import sys, os\n"
+            "sys.path.insert(0, r'{plugin_dir}')\n"
+            "import Parametric_modeling as pm\n"
+            "pm.pre_paraModeling_main(r'{xls}')\n"
+        ).format(plugin_dir=plugin_dir, xls=excel_path.replace('\\', '\\\\'))
+
+        sendCommand(cmd)
+
+        mw.writeToMessageArea(
+            (u"模型尺寸已根据 {} 更新完毕\n"
+            .format(os.path.basename(excel_path))).encode('GB18030'))
+
+
     def onImport1Clicked(self, sender, sel, ptr):
         """处理import1按钮点击事件"""
         try:
@@ -990,7 +1018,7 @@ class STPM_test1033DB(AFXDataDialog):
             cur_item = self.ComboBox_15.getCurrentItem()
             combo_value = self.ComboBox_15.getItemText(cur_item)
             if combo_value == "New":
-            # 选择了"New"才用文本框
+            # 选择了“New”才用文本框
                 aimMaterialName = self.newMaterialText.getText().strip()
                 if not aimMaterialName:
                     showAFXErrorDialog(mw, "Please input a new material name.")
