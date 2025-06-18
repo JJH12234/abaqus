@@ -35,8 +35,9 @@ class STPM_test1033DB(AFXDataDialog):
         ID_CLICKED_importfuzhi,
         ID_CLICKED_createstep,
         ID_CLICKED_modifystep,
-        ID_CLICKED_updateModel
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 18)
+        ID_CLICKED_updateModel,
+        ID_CLICKED_AmpPair
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 19)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
 
@@ -477,9 +478,12 @@ class STPM_test1033DB(AFXDataDialog):
 
         AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环后分析步:'.encode('GB18030'), tgt=form.keyword93Kw, sel=0)
         AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环次数:'.encode('GB18030'), tgt=form.keyword81Kw, sel=0)
-        pairamps = FXButton(p=TabItem_7, text=u'匹配幅值表(当前标签页)'.encode('GB18030'), ic=None, tgt=fileHandler,
-                      sel=AFXMode.ID_ACTIVATE + 1,
+        pairamp = FXButton(p=TabItem_7, text=u'匹配幅值表(当前标签页)'.encode('GB18030'), ic=None, tgt=self,
+                      sel=self.ID_CLICKED_AmpPair,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
+        pairamp.setTarget(self)
+        pairamp.setSelector(self.ID_CLICKED_AmpPair)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_AmpPair, STPM_test1033DB.onCombineCommand)
         self.TabBook_5 = FXTabBook(p=TabItem_7, tgt=None, sel=0,
                               opts=TABBOOK_NORMAL,
                               x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
