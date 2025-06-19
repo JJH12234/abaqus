@@ -52,11 +52,11 @@ def kernal_analsys(analysetype,
         },]
 
     tabledata={'Points':tabledata1,'Paths':tabledata2}
-    if analysetype=='Inelastic strain':
+    if analysetype==u'非弹性应变'.encode('GB18030'):
         kernel_IE(tabledata,Field_configs,Step_configs,kw1=picks1,kw2=picks2,path_extras_configs=path_extras_configs)
-    elif analysetype=='Inelastic damage':
+    elif analysetype==u'非弹性损伤'.encode('GB18030'):
         kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=picks1,kw2=picks2)
-    elif analysetype=='Brittle failure':
+    elif analysetype==u'防脆断分析'.encode('GB18030'):
         kernel_BrittleFailure(tabledata,Brittle_variables,path_extras_configs=path_extras_configs)
         # brittle_assess.run_gui()
         execfile('C:/Users/mrvoid/abaqus_plugins/Inelasticprogram/brittle_assess.py',__main__.__dict__)
