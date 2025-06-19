@@ -67,7 +67,7 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
     odbData=get_current_odbdata()
     #激活每循环最后分析步
     ActiveStepsFrames()
-    if Step_configs['extrapolateType']=='Direct':
+    if Step_configs['extrapolateType']=='Direct' or Step_configs['extrapolateType']=='None':
         ActiveStepsFrames(SSb='mod',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     elif Step_configs['extrapolateType']=='Add':
         ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
