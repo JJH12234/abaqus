@@ -354,7 +354,7 @@ class SoftwareprogramDB(AFXDataDialog):
     # ---------------------------------------------
     def onTinker(self, sender, sel, ptr):
         """通过 sendCommand 运行 brittle_assess.py，并把异常打印到 CLI"""
-        script = r"D:/SIMULIA/EstProducts/2023/win_b64/code/python2.7/lib/abaqus_plugins/elasticprogram/brittle_assess.py"
+        script = r"brittle_assess.py"
         cmd = (
             "import sys, runpy, traceback\n"
             "sys.modules.pop('brittle_assess', None)\n"
@@ -367,7 +367,7 @@ class SoftwareprogramDB(AFXDataDialog):
 
         sendCommand(cmd)                      
         getAFXApp().getAFXMainWindow().writeToMessageArea(
-            "【Tinker】脚本命令已发松，请在 Kernel Command 视图查看运行日志\n"
+            u"【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n".encode('GB18030')
         )
         return 1
 

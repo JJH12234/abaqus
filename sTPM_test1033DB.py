@@ -113,15 +113,15 @@ class STPM_test1033DB(AFXDataDialog):
             AFXTable.POPUP_CUT | AFXTable.POPUP_COPY | AFXTable.POPUP_PASTE | AFXTable.POPUP_INSERT_ROW | AFXTable.POPUP_DELETE_ROW | AFXTable.POPUP_CLEAR_CONTENTS | AFXTable.POPUP_READ_FROM_FILE | AFXTable.POPUP_WRITE_TO_FILE)
         self.table.setLeadingRows(1)
         self.table.setLeadingColumns(1)
-        self.table.setColumnWidth(1, 100)
+        self.table.setColumnWidth(1, 120)
         self.table.setColumnType(1, AFXTable.TEXT)
-        self.table.setColumnWidth(2, 100)
+        self.table.setColumnWidth(2, 80)
         self.table.setColumnType(2, AFXTable.TEXT)
-        self.table.setColumnWidth(3, 100)
+        self.table.setColumnWidth(3, 150)
         self.table.setColumnType(3, AFXTable.TEXT)
         self.table.setColumnWidth(4, 100)
         self.table.setColumnType(4, AFXTable.TEXT)
-        self.table.setColumnWidth(5, 100)
+        self.table.setColumnWidth(5, 80)
         self.table.setColumnType(5, AFXTable.TEXT)
         self.table.setLeadingRowLabels(u'参数名\t参数值\t类型\t部件\t特征'.encode('GB18030'))
         self.table.setStretchableColumn(self.table.getNumColumns() - 1)
@@ -1485,7 +1485,7 @@ class STPM_test1033DB(AFXDataDialog):
                 table.setItemText(row, col, "")  # 将每个单元格内容设置为空字符串
 
         # 设置表头
-        table.setLeadingRowLabels('para\tvalue\ttype\tpart\tfeature')
+        table.setLeadingRowLabels(u'参数名\t参数值\t类型\t部件\t特征'.encode('GB18030'))
 
         # 填充数据
         for row in range(sheet.nrows):
@@ -1536,8 +1536,8 @@ class STPM_test1033DB(AFXDataDialog):
                     self.form.keyword65Kw.setValue(self.form.keyword65Kw.getValue()+','+str(item_text))
     
                 # 如果需要，可以在消息区域显示选中的内容
-                mw = getAFXApp().getAFXMainWindow()
-                mw.writeToMessageArea("Selected item: " + str(item_text))
+                # mw = getAFXApp().getAFXMainWindow()
+                # mw.writeToMessageArea("Selected item: " + str(item_text))
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea(str(e))
@@ -1844,7 +1844,7 @@ class XslFileHandler(FXObject):
                     table.setItemText(row, col, "")  # 将每个单元格内容设置为空字符串
 
             # 设置表头
-            table.setLeadingRowLabels('para\tvalue\ttype\tpart\tfeature')
+            table.setLeadingRowLabels(u'参数名\t参数值\t类型\t部件\t特征'.encode('GB18030'))
 
             # 填充数据
             for row in range(sheet.nrows):
