@@ -531,7 +531,7 @@ class SoftwareprogramDB(AFXDataDialog):
             widget.enable()
         # 非弹性应变
         if current_text == u'非弹性应变'.encode('GB18030'):
-            main_window.writeToMessageArea(u" 防脆断分析...\n".encode('GB18030'))
+            # main_window.writeToMessageArea(u" 防脆断分析...\n".encode('GB18030'))
             self.ComboBox_8.disable()
             self.GroupBox_9.disable()
             self.ComboBox_6.disable()

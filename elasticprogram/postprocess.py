@@ -73,7 +73,7 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
         ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     #处理节点输入
     nodelabels, sortedflagged=process_points_data(tabledata['Points'],kw1,kw2)
-    print(sortedflagged)
+    # print(sortedflagged)
     ##提取节点数据
     ###指定提取内容
     CreDamUV=Field_configs['CreepDamage']
@@ -104,8 +104,8 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
     if Step_configs['extrapolateType']=='Direct':
         for part in Damages:
             for node in Damages[part]:
-                Damages[part][node]['FatigueDamageByCycle']=directExtrapolate(Damages[part][node]['FatigueDamageAccumByCycle'],Step_configs['extrapolateTimes'])
-                Damages[part][node]['CreepDamageByCycle']=directExtrapolate(Damages[part][node]['CreepDamageAccumByCycle'],Step_configs['extrapolateTimes'])
+                Damages[part][node]['FatigueDamageByCycle']=directExtrapolate(Damages[part][node]['FatigueDamageByCycle'],Step_configs['extrapolateTimes'])
+                Damages[part][node]['CreepDamageByCycle']=directExtrapolate(Damages[part][node]['CreepDamageByCycle'],Step_configs['extrapolateTimes'])
     elif Step_configs['extrapolateType']=='Add':
         Damages[part][node]['FatigueDamageByCycle'].append(Damages[part][node]['FatigueDamageByCycle'][-1])
         Damages[part][node]['CreepDamageByCycle'].append(Damages[part][node]['CreepDamageByCycle'][-1])
@@ -150,7 +150,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
         ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     #处理节点输入
     nodelabels, sortedflagged=process_points_data(tabledata['Points'],kw1,kw2)
-    print(sortedflagged)
+    # print(sortedflagged)
     ##提取节点数据
     ###指定提取内容
     variables=[{'name':'PE' ,},{'name':'CE' ,},]

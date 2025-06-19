@@ -29,7 +29,7 @@ class Softwareprogram_plugin(AFXForm):
         self.CreepDamageFieldnumKw = AFXIntKeyword(self.cmd, 'CreepDamageFieldnum', True, 27)
         self.FatigueDamageFieldnumKw = AFXIntKeyword(self.cmd, 'FatigueDamageFieldnum', True, 31)
         self.pathStyleKw = AFXStringKeyword(self.cmd, 'pathStyle', True, 'UNIFORM_SPACING')
-        self.numIntervalsKw = AFXIntKeyword(self.cmd, 'numIntervals', True, 100)
+        self.numIntervalsKw = AFXIntKeyword(self.cmd, 'numIntervals', True, 20)
         if not self.radioButtonGroups.has_key('shape'):
             self.shapeKw1 = AFXIntKeyword(None, 'shapeDummy', True)
             self.shapeKw2 = AFXStringKeyword(self.cmd, 'shape', True)
@@ -47,7 +47,7 @@ class Softwareprogram_plugin(AFXForm):
         self.BrittleStressKw = AFXStringKeyword(self.cmd, 'BrittleStress', True, 'Mises')
         self.extrapolateTypeKw = AFXStringKeyword(self.cmd, 'extrapolateType', True, 'Add')
         self.extrapolateTimesKw = AFXIntKeyword(self.cmd, 'extrapolateTimes', True, 365)
-        self.addTypeStepNamesKw = AFXStringKeyword(self.cmd, 'addTypeStepNames', True, 'G6-Cycle10,G13-Cycle10,G9-Cycle10')
+        self.addTypeStepNamesKw = AFXStringKeyword(self.cmd, 'addTypeStepNames', True, '')
         self.picks1Kw = AFXObjectKeyword(self.cmd, 'picks1', TRUE, pickedDefault)
         self.picks2Kw = AFXObjectKeyword(self.cmd, 'picks2', TRUE, pickedDefault)
         # plugin.py 恢复为 AFXTableKeyword
@@ -79,7 +79,7 @@ class Softwareprogram_plugin(AFXForm):
         ) % script.replace('\\', '\\\\')
         sendCommand(cmd)
         getAFXApp().getAFXMainWindow().writeToMessageArea(
-            "11111【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n"
+            "【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n"
         )
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def getFirstDialog(self):
