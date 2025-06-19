@@ -67,7 +67,7 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
     odbData=get_current_odbdata()
     #激活每循环最后分析步
     ActiveStepsFrames()
-    if Step_configs['extrapolateType']=='Direct':
+    if Step_configs['extrapolateType']=='Direct' or Step_configs['extrapolateType']=='None':
         ActiveStepsFrames(SSb='mod',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     elif Step_configs['extrapolateType']=='Add':
         ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
@@ -93,7 +93,10 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
         if part not in Damages:
             Damages[part]=OrderedDict()
         if node not in Damages[part]:
-            Damages[part][node]=OrderedDict({'CreepDamageByCycle':[],'FatigueDamageByCycle':[],'judge':None})
+            Damages[part][node]=OrderedDict()
+            Damages[part][node]['CreepDamageByCycle']=[]
+            Damages[part][node]['FatigueDamageByCycle']=[]
+            Damages[part][node]['judge']=None
         if field==CreDamUV:
             Damages[part][node]['CreepDamageByCycle']=[row[1] for row in xy.data]
         elif field==FatDamUV:
@@ -166,9 +169,12 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
         node='node'+node
         field=xy.yValuesLabel.split(' ')[0]
         if part not in IE:
-            IE[part]={}
+            IE[part]=OrderedDict()
         if node not in IE[part]:
-            IE[part][node]=OrderedDict({pre+c : [] for c in components for pre in ['PE','CE']})
+            IE[part][node]=OrderedDict()
+            for pre in ['CE','PE']:
+                for c in components:
+                    IE[part][node][pre+c]=[]
         for component in components:
             for IEtype in ['PE','CE']:
                 if field=='{}:{}{}'.format(IEtype,IEtype,component):
@@ -179,10 +185,13 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
             for node in IE[part]:
                 for component in components:
                     if IE[part][node]['PE'+component] and IE[part][node]['CE'+component]:
+                        #CE分量直接外推
                         IE[part][node]['CE'+component]=directExtrapolate(IE[part][node]['CE'+component],Step_configs['extrapolateTimes'])
                         if max(IE[part][node]['PE'+component])>IE[part][node]['PE'+component][-1]:
+                            #对于最后一步PE分量并非最大值的情况，直接多次复制最大值
                             IE[part][node]['PE'+component]=IE[part][node]['PE'+component]+[max(IE[part][node]['PE'+component])]*Step_configs['extrapolateTimes']
                         else:
+                            #否则，直接外推
                             IE[part][node]['PE'+component]=directExtrapolate(IE[part][node]['PE'+component],Step_configs['extrapolateTimes'])
     elif Step_configs['extrapolateType']=='Add':
         for component in components:
