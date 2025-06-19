@@ -992,7 +992,8 @@ class STPM_test1033DB(AFXDataDialog):
             showAFXErrorDialog(mw, u"请先指定 Excel 文件路径")
             return
         excel_path = os.path.abspath(excel_path)
-        sheet_name = self.form.keyword95Kw.getValue().strip()        
+        sheet_name = self.ComboBox_14.getText().strip()
+        mw.writeToMessageArea("Sheet name: " + str(sheet_name))
         if not sheet_name:
             showAFXErrorDialog(mw, u"请先选择 / 输入工作表名称")
             return
