@@ -118,19 +118,19 @@ def ass_regen(m):
     m.rootAssembly.regenerate()
     
 
-def read_excel_to_tuple(xls_path):
+def read_excel_to_tuple(xls_path,xls_sheetname):
     """示例：用 xlrd 读 Excel（Python2.7 环境可用）"""
     book = xlrd.open_workbook(xls_path)
-    sheet = book.sheet_by_index(0)
+    sheet = book.sheet_by_name(xls_sheetname)
     return tuple(tuple(sheet.row_values(i)) for i in range(sheet.nrows))
 
-def pre_paraModeling_main(xls_path):
+def pre_paraModeling_main(xls_path,xls_sheetname):
     """供 GUI 直接调用：只传路径"""
-    data = read_excel_to_tuple(xls_path)
+    data = read_excel_to_tuple(xls_path,xls_sheetname)
     pre_paraModeling(data)
 # 调用函数
 if __name__ == '__main__':
     demo = u'd:/SIMULIA/EstProducts/2023/win_b64/code/python2.7/lib/abaqus_plugins/STPM_test1034/ParaModelingData.xls'
     # data=read_excel_to_tuple(u'C:\\Users\\mrvoid\\abaqus_plugins\\STPM_test1035\\ParaModelingData.xls')
-    pre_paraModeling_main(demo)
+    pre_paraModeling_main(demo,'XGB')
     
