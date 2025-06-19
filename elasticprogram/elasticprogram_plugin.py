@@ -140,7 +140,7 @@ thisDir = os.path.dirname(thisPath)
 
 toolset = getAFXApp().getAFXMainWindow().getPluginToolset()
 toolset.registerGuiMenuButton(
-    buttonText='InelasticAnalsis|analysis', 
+    buttonText=u'非弹工具|非弹性分析（后处理）'.encode('GB18030'), 
     object=Softwareprogram_plugin(toolset),
     messageId=AFXMode.ID_ACTIVATE,
     icon=None,

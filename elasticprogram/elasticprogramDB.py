@@ -510,6 +510,7 @@ class SoftwareprogramDB(AFXDataDialog):
         
         # 更新控件
         self.updateWidgetsByAnalyseType()
+        self.updateWidgetsByExtrapolateType()
         return 1
 
     def updateWidgetsByAnalyseType(self):
