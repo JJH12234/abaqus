@@ -987,30 +987,34 @@ class STPM_test1033DB(AFXDataDialog):
 
     def onUpdateModelClicked(self, sender, sel, ptr):
         mw = getAFXApp().getAFXMainWindow()
-
-        excel_path = self.fileNameKw.getValue().strip()
+        excel_path = self.fileNameKw.getValue().strip()          
         if not excel_path:
             showAFXErrorDialog(mw, u"请先指定 Excel 文件路径")
             return
-        if not os.path.exists(excel_path):
-            showAFXErrorDialog(mw, u"文件不存在：\n" + excel_path)
+        excel_path = os.path.abspath(excel_path)
+        sheet_name = self.form.keyword95Kw.getValue().strip()        
+        if not sheet_name:
+            showAFXErrorDialog(mw, u"请先选择 / 输入工作表名称")
             return
-
-        # 若插件目录不在 sys.path，可插入；若已在，可省略
-        plugin_dir = os.path.dirname(__file__).replace('\\', '\\\\')
-
+        plugin_dir = os.path.dirname(__file__)
         cmd = (
             "import sys, os\n"
-            "sys.path.insert(0, r'{plugin_dir}')\n"
+            "sys.path.insert(0, r'{plugin}')\n"
             "import Parametric_modeling as pm\n"
-            "pm.pre_paraModeling_main(r'{xls}')\n"
-        ).format(plugin_dir=plugin_dir, xls=excel_path.replace('\\', '\\\\'))
-
+            "pm.pre_paraModeling_main(r'{xls}', r'{sheet}')\n"
+        ).format(
+            plugin=plugin_dir.replace('\\', '\\\\'),
+            xls=excel_path.replace('\\', '\\\\'),
+            sheet=sheet_name
+        )
+        mw.writeToMessageArea("===== CMD START =====\n")
+        mw.writeToMessageArea(cmd)
+        mw.writeToMessageArea("===== CMD END   =====\n")
         sendCommand(cmd)
-
         mw.writeToMessageArea(
-            (u"模型尺寸已根据 {} 更新完毕\n"
-            .format(os.path.basename(excel_path))).encode('GB18030'))
+            (u"模型尺寸已根据 {file} | Sheet: {sheet} 更新完毕\n"
+            .format(file=os.path.basename(excel_path), sheet=sheet_name))
+            .encode('GB18030'))
 
 
     def onImport1Clicked(self, sender, sel, ptr):
