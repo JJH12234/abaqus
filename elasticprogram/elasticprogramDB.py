@@ -203,8 +203,12 @@ class SoftwareprogramDB(AFXDataDialog):
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
         # vf.setSelector(99)
-        odbdata =  get_current_odbdata()
-        # odbdata = session.odbData[session.viewports[session.currentViewportName].odbDisplay.name]
+        try:
+            odbdata =  get_current_odbdata()
+        except AttributeError:
+            mw=getAFXApp().getMainWindow()
+            mw.writeToMessageArea(u'请先打开odb文件'.encode('GB18030'))
+            raise AttributeError(u'请先打开odb文件'.encode('GB18030'))
         instance_list = odbdata.instances.keys()
 
         # Create the main frame to hold the ComboBox and Table
@@ -223,7 +227,7 @@ class SoftwareprogramDB(AFXDataDialog):
                                         AFXTable.POPUP_INSERT_ROW | AFXTable.POPUP_DELETE_ROW | AFXTable.POPUP_CLEAR_CONTENTS |
                                         AFXTable.POPUP_READ_FROM_FILE | AFXTable.POPUP_WRITE_TO_FILE)
         self.table_points.setLeadingRows(1)
-        self.table_points.setLeadingRowLabels("Instance Name\tNode Labels (e.g. 5,10,62:04)\tisWeld")
+        self.table_points.setLeadingRowLabels(u"实例名称\t结点标签 (e.g. 5,10,62:04)\t焊缝".encode('GB18030'))
         # Set column properties for Node Labels (Text input)
         self.table_points.setColumnWidth(1, 200)  # Node Labels (Text input)
         self.table_points.setColumnType(1, AFXTable.TEXT)
@@ -270,7 +274,7 @@ class SoftwareprogramDB(AFXDataDialog):
 
         # Set leading rows and columns
         self.table_paths.setLeadingRows(1)
-        self.table_paths.setLeadingRowLabels('Path Name\tInstance Name\tNode Labels (e.g. 5,10,6:20:4)\tisWeld')
+        self.table_paths.setLeadingRowLabels(u'路径名称\t实例名称\t结点标签 (e.g. 5,10,6:20:4)\t焊缝'.encode('GB18030'))
 
         # Set column widths and types
         self.table_paths.setColumnWidth(0, 100)  # Path Name
@@ -423,7 +427,7 @@ class SoftwareprogramDB(AFXDataDialog):
                 if inst and node:
                     pts_rows.append((inst, node, weld))
                 elif weld:  # ֻ是否 weld 判断
-                    wr("[WARN] PTS row{} skipped: \n".format(unicode(r)))
+                    wr(u"[警告] 路径表 行{} 跳过: \n".format(unicode(r)).encode('GB18030'))
 
 
             kw1 = self.form.tabledata1Kw
@@ -459,8 +463,8 @@ class SoftwareprogramDB(AFXDataDialog):
 
             wr(u"完成: 总路径={} 行, 当前路径={} 行\n".format(len(pts_rows), len(pth_rows)).encode('GB18030'))
 
-        except Exception:
-            wr("Table-processing error:\n{}\n".format(format_exc()))
+        except Exception as e:
+            wr(u"表格处理错误:\n{}\n".format(unicode(e)).encode('GB18030'))
             AFXMessageDialog("Table-processing error  see Message Area.").showModal()
 
 
