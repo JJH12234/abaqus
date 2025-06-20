@@ -354,7 +354,7 @@ class SoftwareprogramDB(AFXDataDialog):
     # ---------------------------------------------
     def onTinker(self, sender, sel, ptr):
         """通过 sendCommand 运行 brittle_assess.py，并把异常打印到 CLI"""
-        script = r"brittle_assess.py"
+        script = r"./brittle_assess.py"
         cmd = (
             "import sys, runpy, traceback\n"
             "sys.modules.pop('brittle_assess', None)\n"
@@ -668,17 +668,18 @@ class SoftwareprogramDB(AFXDataDialog):
     )
         self.spinner_extrao.enable()
         self.Textfield_step.enable()
-        if current_text == 'None':
+        if current_text == 'Direct':
+            self.spinner_extrao.enable()
+            self.Textfield_step.disable()
+        elif current_text == 'Add':
+            self.spinner_extrao.enable()
+            self.Textfield_step.enable()
+        elif current_text == 'None' or self.ComboBox_2.getItemText(self.ComboBox_2.getCurrentItem())==u'防脆断分析'.encode('GB18030'):
             main_window.writeToMessageArea(
             u"选择 None → 关闭所有外推控件\n".encode('GB18030')
         )
             self.spinner_extrao.disable()
             self.Textfield_step.disable()
-        if current_text == 'Direct':
-            self.Textfield_step.disable()
-        if current_text == 'Add':
-            self.spinner_extrao.enable()
-            self.Textfield_step.enable()
         self.getOwner().recalc()
         self.getOwner().repaint()
     

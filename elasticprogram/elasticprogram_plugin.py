@@ -66,8 +66,7 @@ class Softwareprogram_plugin(AFXForm):
         self.tabledata2Kw.setColumnType(2, AFXTABLE_TYPE_STRING)  # 节点标签
         self.tabledata2Kw.setColumnType(3, AFXTABLE_TYPE_BOOL)    # 焊缝标记
     def _run_brittle_assess(self):
-        script = r"D:/SIMULIA/EstProducts/2023/win_b64/code/python2.7/" \
-                 r"lib/abaqus_plugins/elasticprogram/brittle_assess.py"
+        script = r"./brittle_assess.py"
         cmd = (
             "import sys, runpy, traceback\n"
             "sys.modules.pop('brittle_assess', None)\n"
