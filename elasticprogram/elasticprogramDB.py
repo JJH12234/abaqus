@@ -353,8 +353,20 @@ class SoftwareprogramDB(AFXDataDialog):
         return session.odbData[get_current_odbdp().name]
     # ---------------------------------------------
     def onTinker(self, sender, sel, ptr):
-        """通过 sendCommand 运行 brittle_assess.py，并把异常打印到 CLI"""
-        script = r"./brittle_assess.py"
+        """
+        通过 sendCommand 运行 brittle_assess.py，并把异常打印到 CLI
+        brittle_assess.py 与当前文件 elasticprogramDB.py 位于同一文件夹：
+            …/abaqus_plugins/elasticprogram/
+        """
+
+        import os                                   # ← 新增
+
+        # ── 1. 生成脚本完整路径（相对 → 绝对） ──────────────────────────────
+        plugin_dir  = os.path.dirname(__file__)     # elasticprogramDB.py 所在目录
+        script_path = os.path.join(plugin_dir, 'brittle_assess.py')
+
+        # ── 2. 组装 sendCommand 要执行的字符串 ────────────────────────────
+        script_esc = script_path.replace('\\', '\\\\')   # 反斜杠转义
         cmd = (
             "import sys, runpy, traceback\n"
             "sys.modules.pop('brittle_assess', None)\n"
@@ -363,11 +375,15 @@ class SoftwareprogramDB(AFXDataDialog):
             "    runpy.run_path(r'%s', run_name='__main__')\n"
             "except Exception:\n"
             "    traceback.print_exc()\n"
-        ) % script.replace('\\', '\\\\')      # 双反斜杠防止转义
+        ) % script_esc
 
-        sendCommand(cmd)                      
-        getAFXApp().getAFXMainWindow().writeToMessageArea(
-            u"【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n".encode('GB18030')
+        # ── 3. 发送到 Abaqus/Kernel 执行 ──────────────────────────────────
+        sendCommand(cmd)
+
+        # ── 4. 提示信息 ─────────────────────────────────────────────────
+        mw = getAFXApp().getAFXMainWindow()
+        mw.writeToMessageArea(
+            u"【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n"
         )
         return 1
 
