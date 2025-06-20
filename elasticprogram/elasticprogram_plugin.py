@@ -85,7 +85,7 @@ class Softwareprogram_plugin(AFXForm):
     def getFirstDialog(self):
 
         import elasticprogramDB
-        reload(elasticprogramDB)
+        # reload(elasticprogramDB)
         return elasticprogramDB.SoftwareprogramDB(self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
