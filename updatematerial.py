@@ -38,7 +38,7 @@ def pre_materialImport_main(jsondata,aimMaterialName,UVARMnum,SDVnum):
     #jsondata应该是多级字典结构
     m=get_current_model()
     if aimMaterialName in m.materials:
-        pass
+        pass#不修改已有材料其他属性
     else:
         try:
             m.Material(name=aimMaterialName) #新建

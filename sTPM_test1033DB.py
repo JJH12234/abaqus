@@ -247,7 +247,7 @@ class STPM_test1033DB(AFXDataDialog):
         for material in m.materials.keys():
             self.ComboBox_15.appendItem(text=material)
         self.ComboBox_15.appendItem(text='New')
-        self.newMaterialText = AFXTextField(p=HFrame_38, ncols=12, labelText='New:', 
+        self.newMaterialText = AFXTextField(p=HFrame_38, ncols=12, labelText='NewName:', 
             tgt=form.keyword100Kw, sel=0, opts=0)
         if self.ComboBox_15.getItemText(self.ComboBox_15.getCurrentItem())!='New': #2025年6月4日 lgp
             self.newMaterialText.hide()
@@ -277,14 +277,17 @@ class STPM_test1033DB(AFXDataDialog):
                                     x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
                                     pt=DEFAULT_SPACING, pb=DEFAULT_SPACING, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
         GroupBox_5 = FXGroupBox(p=TabItem_6, text=u'数据格式'.encode('GB18030'), opts=FRAME_GROOVE | LAYOUT_FILL_X)
+        GroupBox_5.hide()
         HFrame_8 = FXHorizontalFrame(p=GroupBox_5, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                      pl=0, pr=0, pt=0, pb=0)
         GroupBox_2 = FXGroupBox(p=HFrame_8, text='Separated XY*', opts=FRAME_GROOVE | LAYOUT_FILL_X)
+        # GroupBox_2.hide()
         HFrame_6 = FXHorizontalFrame(p=GroupBox_2, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                      pl=0, pr=0, pt=0, pb=0)
         FXRadioButton(p=HFrame_6, text='Separated', tgt=form.DataXYTypeKw1, sel=53)
         FXRadioButton(p=HFrame_6, text='Unified X', tgt=form.DataXYTypeKw1, sel=54)
         GroupBox_3 = FXGroupBox(p=HFrame_8, text='Based On...', opts=FRAME_GROOVE | LAYOUT_FILL_X)
+        # GroupBox_3.hide()
         HFrame_7 = FXHorizontalFrame(p=GroupBox_3, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                      pl=0, pr=0, pt=0, pb=0)
         FXRadioButton(p=HFrame_7, text='Step Time', tgt=form.DataTimeTypeKw1, sel=55)
@@ -301,7 +304,7 @@ class STPM_test1033DB(AFXDataDialog):
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
         fileTextHf.setSelector(99)
-        AFXTextField(p=fileTextHf, ncols=70, labelText='File name:', tgt=form.InputDataNameKw, sel=0,
+        AFXTextField(p=fileTextHf, ncols=70, labelText=u'幅值表xls文件:'.encode('GB18030'), tgt=form.InputDataNameKw, sel=0,
                      opts=AFXTEXTFIELD_STRING | LAYOUT_CENTER_Y)
         icon = afxGetIcon('fileOpen', AFX_ICON_SMALL)
         FXButton(p=fileTextHf, text='	Select File\nFrom Dialog', ic=icon, tgt=fileHandler, sel=AFXMode.ID_ACTIVATE,
@@ -321,6 +324,7 @@ class STPM_test1033DB(AFXDataDialog):
         HFrame_10 = FXHorizontalFrame(p=TabItem_6, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                       pl=0, pr=0, pt=0, pb=0)
         GroupBox_7 = FXGroupBox(p=HFrame_10, text='*Separated Example', opts=FRAME_GROOVE)
+        GroupBox_7.hide()
         HFrame_9 = FXHorizontalFrame(p=GroupBox_7, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                      pl=0, pr=0, pt=0, pb=0)
         VFrame_1 = FXVerticalFrame(p=HFrame_9, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
@@ -354,6 +358,7 @@ class STPM_test1033DB(AFXDataDialog):
         else:
             FXHorizontalSeparator(p=HFrame_10, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         GroupBox_8 = FXGroupBox(p=HFrame_10, text='*Unified Example', opts=FRAME_GROOVE)
+        GroupBox_8.hide()
         HFrame_11 = FXHorizontalFrame(p=GroupBox_8, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                       pl=0, pr=0, pt=0, pb=0)
         VFrame_7 = FXVerticalFrame(p=HFrame_11, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
@@ -992,7 +997,8 @@ class STPM_test1033DB(AFXDataDialog):
             showAFXErrorDialog(mw, u"请先指定 Excel 文件路径")
             return
         excel_path = os.path.abspath(excel_path)
-        sheet_name = self.form.keyword95Kw.getValue().strip()        
+        sheet_name = self.ComboBox_14.getText().strip()
+        mw.writeToMessageArea("Sheet name: " + str(sheet_name))
         if not sheet_name:
             showAFXErrorDialog(mw, u"请先选择 / 输入工作表名称")
             return
@@ -1023,18 +1029,18 @@ class STPM_test1033DB(AFXDataDialog):
             mw = getAFXApp().getAFXMainWindow()
             
             # 获取材料名称并验证
-            aimMaterialName = self.newMaterialText.getText()
-            if not aimMaterialName or not aimMaterialName.strip():
-                mw.writeToMessageArea("Error: Material name cannot be empty")
-                return
+            # aimMaterialName = self.newMaterialText.getText()
+            # if not aimMaterialName or not aimMaterialName.strip():
+            #     mw.writeToMessageArea("Error: Material name cannot be empty")
+            #     return
                 
             # 验证材料名称是否合法（只允许字母、数字、下划线和中文）
-            import re
-            if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', aimMaterialName):
-                mw.writeToMessageArea("Error: Material name can only contain letters, numbers, underscores and Chinese characters")
-                return
+            # import re
+            # if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', aimMaterialName):
+                # mw.writeToMessageArea("Error: Material name can only contain letters, numbers, underscores and Chinese characters")
+                # return
             
-            mw.writeToMessageArea("Material name: " + str(aimMaterialName))
+            # mw.writeToMessageArea("Material name: " + str(aimMaterialName))
             cur_item = self.ComboBox_15.getCurrentItem()
             combo_value = self.ComboBox_15.getItemText(cur_item)
             if combo_value == "New":
@@ -1084,18 +1090,18 @@ class STPM_test1033DB(AFXDataDialog):
                             mw.writeToMessageArea("Error processing path: " + str(e))
             
             # 输出数据结构的深度
-            mw.writeToMessageArea("Data structure details:")
+            mw.writeToMessageArea(u"数据结构细节:".encode('GB18030'))
             check_data_depth(jsondata)
             
             # 调用pre_materialImport导入材料
             # try:
-            mw.writeToMessageArea("Starting material import...")
+            mw.writeToMessageArea(u"开始材料导入...".encode('GB18030'))
             cmds=("import updatematerial\n"
                     "updatematerial.pre_materialImport_main({},'{}',{},{})\n".format(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum)))
             sendCommand(cmds)
             #fortran_data = self.pre_materialImport(jsondata, str(aimMaterialName), int(UVARMnum), int(SDVnum))
             # 导入成功后显示消息
-            mw.writeToMessageArea(u"Material {} imported successfully".format(aimMaterialName).encode('GB18030'))
+            mw.writeToMessageArea(u"材料 {} 成功导入".format(unicode(aimMaterialName)).encode('GB18030'))
             # 更新材料下拉框
             self.updateComboBox_15Materials()
             # except Exception as e:
@@ -1394,7 +1400,7 @@ class STPM_test1033DB(AFXDataDialog):
         if currentModelName in mdb.models:
             self.regModel = mdb.models[currentModelName]
             # 注册材料变化监听
-            self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
+            # self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
             # 设置当前模型名称
             self.form.keyword99Kw.setValue(currentModelName)
         
@@ -1447,7 +1453,7 @@ class STPM_test1033DB(AFXDataDialog):
                     pass
             #注册新模型材料
             self.regModel = mdb.models[currentModelName]
-            self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
+            # self.regModel.materials.registerQuery(self.updateComboBox_15Materials, False)
             
             # 更新ModelName显示
             self.form.keyword99Kw.setValue(currentModelName)

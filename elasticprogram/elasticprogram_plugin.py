@@ -66,8 +66,7 @@ class Softwareprogram_plugin(AFXForm):
         self.tabledata2Kw.setColumnType(2, AFXTABLE_TYPE_STRING)  # 节点标签
         self.tabledata2Kw.setColumnType(3, AFXTABLE_TYPE_BOOL)    # 焊缝标记
     def _run_brittle_assess(self):
-        script = r"D:/SIMULIA/EstProducts/2023/win_b64/code/python2.7/" \
-                 r"lib/abaqus_plugins/elasticprogram/brittle_assess.py"
+        script = r"./brittle_assess.py"
         cmd = (
             "import sys, runpy, traceback\n"
             "sys.modules.pop('brittle_assess', None)\n"
@@ -85,7 +84,7 @@ class Softwareprogram_plugin(AFXForm):
     def getFirstDialog(self):
 
         import elasticprogramDB
-        reload(elasticprogramDB)
+        # reload(elasticprogramDB)
         return elasticprogramDB.SoftwareprogramDB(self)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,7 +139,7 @@ thisDir = os.path.dirname(thisPath)
 
 toolset = getAFXApp().getAFXMainWindow().getPluginToolset()
 toolset.registerGuiMenuButton(
-    buttonText='InelasticAnalsis|analysis', 
+    buttonText=u'非弹工具|非弹性分析（后处理）'.encode('GB18030'), 
     object=Softwareprogram_plugin(toolset),
     messageId=AFXMode.ID_ACTIVATE,
     icon=None,

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from abaqusGui import *
 from abaqusConstants import ALL
 import osutils, os
@@ -177,7 +178,7 @@ thisDir = os.path.dirname(thisPath)
 
 toolset = getAFXApp().getAFXMainWindow().getPluginToolset()
 toolset.registerGuiMenuButton(
-    buttonText='InelasticAnalsis|model', 
+    buttonText=u'非弹工具|非弹性建模（前处理）'.encode('GB18030'), 
     object=STPM_test1033_plugin(toolset),
     messageId=AFXMode.ID_ACTIVATE,
     icon=None,
