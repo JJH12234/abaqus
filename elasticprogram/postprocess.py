@@ -21,7 +21,7 @@ def kernal_analsys(analysetype,
            stepIDFs1,stepIDFs2,stepIDFs3,
            BrittleStress,
            extrapolateType,extrapolateTimes,addTypeStepNames,
-           tabledata1=(),tabledata2=(),picks1=(),picks2=()):
+           tabledata1=(),tabledata2=(),picks1=(),picks2=(),CREEP_WELD_FATOR=0.9,FATIGUE_WELD_FATOR=0.5):
     path_extras_configs={#用户希望路径输出
         'pathStyle':pathStyle, 
         'numIntervals':numIntervals, 
@@ -34,7 +34,7 @@ def kernal_analsys(analysetype,
     Step_configs={
         'extrapolateTimes':extrapolateTimes, #外推次数
         'extrapolateType':extrapolateType, #Add
-        'addTypeStepNames':addTypeStepNames.split(','),#增补分析步名称，暂不支持对路径IE增补
+        'addTypeStepNames':addTypeStepNames.split(',') if addTypeStepNames else [],#增补分析步名称，暂不支持对路径IE增补
         'stepIDFs':[stepIDFs1,stepIDFs2,stepIDFs3], #循环前有几个分析步，每几步一个循环，最后几步不是循环
         'damageJudge':[float(x) for x in CFICriterion.split(',')], #疲劳，蠕变判据
         }
@@ -55,12 +55,12 @@ def kernal_analsys(analysetype,
     if analysetype==u'非弹性应变'.encode('GB18030'):
         kernel_IE(tabledata,Field_configs,Step_configs,kw1=picks1,kw2=picks2,path_extras_configs=path_extras_configs)
     elif analysetype==u'非弹性损伤'.encode('GB18030'):
-        kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=picks1,kw2=picks2)
+        kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=picks1,kw2=picks2,CREEP_WELD_FATOR=CREEP_WELD_FATOR,FATIGUE_WELD_FATOR=FATIGUE_WELD_FATOR)
     elif analysetype==u'防脆断分析'.encode('GB18030'):
         kernel_BrittleFailure(tabledata,Brittle_variables,path_extras_configs=path_extras_configs)
         # brittle_assess.run_gui()
         # execfile('C:/Users/mrvoid/abaqus_plugins/Inelasticprogram/brittle_assess.py',__main__.__dict__)
-def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_configs={}):
+def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_configs={},CREEP_WELD_FATOR=0.9,FATIGUE_WELD_FATOR=0.5):
     viewport=get_current_viewport()
     odbDisplay=get_current_odbdp()
     odb=get_current_odb()
@@ -73,6 +73,7 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
         ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     #处理节点输入
     nodelabels, sortedflagged=process_points_data(tabledata['Points'],kw1,kw2)
+    # print(sortedflagged)
     # print(sortedflagged)
     ##提取节点数据
     ###指定提取内容
@@ -97,10 +98,24 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
             Damages[part][node]['CreepDamageByCycle']=[]
             Damages[part][node]['FatigueDamageByCycle']=[]
             Damages[part][node]['judge']=None
+        # print(node.split('node')[-1])
+        # print(sortedflagged.get(part))
+        # 转换节点编号为整数并安全获取列表
+        node_num = int(node.split('node')[-1])
+        if sortedflagged and node_num in sortedflagged.get(part, []):
+            Damages[part][node]['isWeld']=True
+        else:
+            Damages[part][node]['isWeld']=False
         if field==CreDamUV:
-            Damages[part][node]['CreepDamageByCycle']=[row[1] for row in xy.data]
+            if Damages[part][node]['isWeld']==True:
+                Damages[part][node]['CreepDamageByCycle']=[row[1]/CREEP_WELD_FATOR for row in xy.data]
+            else:
+                Damages[part][node]['CreepDamageByCycle']=[row[1] for row in xy.data]
         elif field==FatDamUV:
-            Damages[part][node]['FatigueDamageByCycle']=[row[1] for row in xy.data]
+            if Damages[part][node]['isWeld']==True:
+                Damages[part][node]['FatigueDamageByCycle']=[row[1]/FATIGUE_WELD_FATOR for row in xy.data]
+            else:
+                Damages[part][node]['FatigueDamageByCycle']=[row[1] for row in xy.data]
             if Step_configs['extrapolateType']=='Add':
                 Damages[part][node]['FatigueDamageByCycle']=Damages[part][node]['FatigueDamageByCycle'][:-1]#去掉HOLDING点
     ###外推
@@ -125,14 +140,24 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 part,node=xy.yValuesLabel.split('at part instance ')[-1].split(' node ')
                 node='node'+node
                 field=xy.yValuesLabel.split(' ')[0]
-                delta=xy.data[-1][1]-xy.data[0][1]
-                if field==CreDamUV:
-                    Damages[part][node]['AddCreepDamage_'+stepname]=delta
-                    Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
-
-                elif field==FatDamUV:
-                    Damages[part][node]['AddFatigueDamage_'+stepname]=delta
-                    Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
+                if Damages[part][node]['isWeld']==True:
+                    if field==CreDamUV:
+                        delta=(xy.data[-1][1]-xy.data[0][1])/CREEP_WELD_FATOR
+                        Damages[part][node]['AddCreepDamage_'+stepname]=delta
+                        Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
+                    elif field==FatDamUV:
+                        delta=(xy.data[-1][1]-xy.data[0][1])/FATIGUE_WELD_FATOR
+                        Damages[part][node]['AddFatigueDamage_'+stepname]=delta
+                        Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
+                else:
+                    if field==CreDamUV:
+                        delta=(xy.data[-1][1]-xy.data[0][1])
+                        Damages[part][node]['AddCreepDamage_'+stepname]=delta
+                        Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
+                    elif field==FatDamUV:
+                        delta=(xy.data[-1][1]-xy.data[0][1])
+                        Damages[part][node]['AddFatigueDamage_'+stepname]=delta
+                        Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
     for part in Damages:
         for node in Damages[part]:
             Damages[part][node]['judge']='Pass' if is_below_double_breakline(Damages[part][node]['FatigueDamageByCycle'][-1],Damages[part][node]['CreepDamageByCycle'][-1],Step_configs['damageJudge']) else 'NotPass'
@@ -154,6 +179,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
         ActiveStepsFrames(SSb='mod and last',SFb='last',bstep=Step_configs['stepIDFs'][0],cstep=Step_configs['stepIDFs'][1],astep=Step_configs['stepIDFs'][2])
     #处理节点输入
     nodelabels, sortedflagged=process_points_data(tabledata['Points'],kw1,kw2)
+    
     # print(sortedflagged)
     ##提取节点数据
     ###指定提取内容
@@ -225,10 +251,13 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
             PEs=[ IE[part][node]['PE'+c][-1] if IE[part][node]['PE'+c] else 0 for c in components]
             IEs=[ CEs[i] + PEs[i] for i in range(len(CEs)) ]
             IE[part][node]['FinalIEmax']=max_principal_strain(*IEs)
-            if sortedflagged!={} and (node.split('node')[-1] in sortedflagged.get(part)):
+            node_num=int(node.split('node')[-1])
+            if sortedflagged!={} and (node_num in sortedflagged.get(part)):
                 judge=0.025
+                IE[part][node]['isWeld']=True
             else:
                 judge=0.05
+                IE[part][node]['isWeld']=False
             IE[part][node]['judge']='Pass' if IE[part][node]['FinalIEmax']<judge else 'NotPass >{}%'.format(str(judge*100))
     ###输出
     with open(r'IE_point {}.json'.format(datetimenow), 'w') as f:
@@ -662,10 +691,12 @@ def getxyData_point(args):
         pass
     if isinstance(xyDataObjectsList, list):
         # 如果返回值是列表，使用 extend() 方法添加到既有列表中
-        xyDataObjectsList.extend(xyDataObjectsList)
+        # xyDataObjectsList.extend(xyDataObjectsList)
+        pass
     else:
         # 如果返回值是单个对象，使用 append() 方法添加到既有列表中
-        xyDataObjectsList.append(xyDataObjectsList)
+        # xyDataObjectsList.append(xyDataObjectsList)
+        xyDataObjectsList = [xyDataObjectsList]
     return xyDataObjectsList
 
 def getxyData_path(args):
@@ -679,10 +710,12 @@ def getxyData_path(args):
         print("filed {} not found".format(str(args['variable'])))
     if isinstance(xyDataObjectsList, list):
         # 如果返回值是列表，使用 extend() 方法添加到既有列表中
-        xyDataObjectsList.extend(xyDataObjectsList)
+        # xyDataObjectsList.extend(xyDataObjectsList)
+        pass
     else:
         # 如果返回值是单个对象，使用 append() 方法添加到既有列表中
-        xyDataObjectsList.append(xyDataObjectsList)
+        # xyDataObjectsList.append(xyDataObjectsList)
+        xyDataObjectsList = [xyDataObjectsList]
     return xyDataObjectsList
 
 def max_principal_strain(e_xx, e_yy, e_zz, gamma_xy, gamma_xz, gamma_yz):
