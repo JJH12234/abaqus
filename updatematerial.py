@@ -136,14 +136,27 @@ def addproperty(mm, datarow):
     property_name = datarow[0]
     property_type = datarow[1]
     table_data = datarow[-1]
+    # print(table_data)
+    if table_data==((None,),):
+        try:
+            print(u"{0}数据为空，将尝试删除{0}属性".format(unicode(property_name)).encode('GB18030'))
+            try:
+                mmp=getattr(mm,property_name[0].lower() + property_name[1:])
+                del mmp
+            except Exception as e:
+                print(u'删除{}失败，请管理员检查关键字'.format(unicode(property_name)).encode('GB18030'))
+            return 0
+        except Exception as e:
+            print(e)
+            return 0
     tDCflag = tDepCheck(property_name, property_type, table_data)
     try:
         tryarg=globals()[property_type.upper().replace(' ', '')]
     except (KeyError , AttributeError):
         tryarg=NONE
         if property_name!='Creep': #蠕变属性下'law'参数的常量名比较奇怪
-            print(u"{pt}不是abaqusConstants".format(pt=str(property_type).encode('GB18030').upper().replace(' ', '')))
-            print(u"属性{pn}以默认值建立".format(pn=property_name).encode('GB18030'))
+            print(u"{pt}不是abaqusConstants".format(pt=unicode(str(property_type)).encode('GB18030').upper().replace(' ', '')))
+            print(u"属性{pn}以默认值建立".format(pn=unicode(property_name)).encode('GB18030'))
     handler_map = {
         # Density处理
         ('Density', 'Uniform'): {
@@ -209,6 +222,13 @@ def addproperty(mm, datarow):
             }
         },
         # Plastic处理
+        ('Plastic','User'):{
+            'method': 'Plastic',
+            'args': {
+                'hardening': USER,
+                'table': table_data,
+            }
+        },
         ('Plastic', '*'): {
             'method': 'Plastic',
             'args': {
@@ -321,6 +341,8 @@ def pre_materialImport(jsondata):
     for i in range(0, len(flat_data)):
         if flat_data[i][0] == "Creep" and flat_data[i][1] == 'User_defined':
             Creep = flat_data[i]
+        elif flat_data[i][0] == "Plastic" and flat_data[i][1] == 'User':
+            pass#待补充UHARD
         elif flat_data[i][0] == "user_RepresentativeStress":
             user_RepresentativeStress = flat_data[i]
         elif flat_data[i][0] == "user_CreepRuptureLife":

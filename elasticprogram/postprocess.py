@@ -59,7 +59,7 @@ def kernal_analsys(analysetype,
     elif analysetype==u'防脆断分析'.encode('GB18030'):
         kernel_BrittleFailure(tabledata,Brittle_variables,path_extras_configs=path_extras_configs)
         # brittle_assess.run_gui()
-        execfile('C:/Users/mrvoid/abaqus_plugins/Inelasticprogram/brittle_assess.py',__main__.__dict__)
+        # execfile('C:/Users/mrvoid/abaqus_plugins/Inelasticprogram/brittle_assess.py',__main__.__dict__)
 def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_configs={}):
     viewport=get_current_viewport()
     odbDisplay=get_current_odbdp()

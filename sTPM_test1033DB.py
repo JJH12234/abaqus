@@ -1358,7 +1358,6 @@ class STPM_test1033DB(AFXDataDialog):
             node_name = self.tree.getItemText(selected_item)
             selected_item_data = get_item_data(selected_item)
             if isinstance(selected_item_data, list):
-
                 self.showDetailDialog(node_name, selected_item)
             # showAFXInformationDialog(mw, str(get_item_path(selected_item)))
 
@@ -2032,7 +2031,11 @@ class MaterialDataDialog(AFXDialog):
                     if row_data:
                         new_data.append(row_data)
             
-            self.modified_data = new_data if new_data else None
+            
+            if new_data:
+                self.modified_data = new_data
+            else:
+                self.modified_data = ((None,),)
             self.update_item_data(self.owner,self.item,self.modified_data)
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea(u"保存成功{}".format(self.modified_data).encode('GB18030'))
