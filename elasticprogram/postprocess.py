@@ -128,10 +128,11 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 delta=xy.data[-1][1]-xy.data[0][1]
                 if field==CreDamUV:
                     Damages[part][node]['AddCreepDamage_'+stepname]=delta
-                    Damages[part][node]['CreepDamageByCycle'][-1]+=delta
+                    Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
+
                 elif field==FatDamUV:
                     Damages[part][node]['AddFatigueDamage_'+stepname]=delta
-                    Damages[part][node]['FatigueDamageByCycle'][-1]+=delta
+                    Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
     for part in Damages:
         for node in Damages[part]:
             Damages[part][node]['judge']='Pass' if is_below_double_breakline(Damages[part][node]['FatigueDamageByCycle'][-1],Damages[part][node]['CreepDamageByCycle'][-1],Step_configs['damageJudge']) else 'NotPass'
@@ -215,7 +216,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                                 delta=xy.data[-1][1]-xy.data[0][1]
                                 if field=='CE:CE{}'.format(component):
                                     IE[part][node]['CE'+component+'Add_'+stepname]=delta
-                                    IE[part][node]['CE'+component][-1]+=delta
+                                    IE[part][node]['CE'+component][-1]+=delta*Step_configs['extrapolateTimes']
                                 if field=='PE:PE{}'.format(component):
                                     pass#等待考虑
     for part in IE:
@@ -233,6 +234,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
     with open(r'IE_point {}.json'.format(datetimenow), 'w') as f:
         json.dump(IE, f, indent=4)
     print(u'IE_point {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
+    
     #处理路径输入
     processd_path=process_path_data(tabledata['Paths'])
     ActiveStepsFrames()
@@ -250,6 +252,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
     IE=OrderedDict()
     components=['11','22','33','12','13','23']
     for item in processd_path:
+        # print(item)
         pthname,expression,flag=item
         IE[pthname]=OrderedDict()
         ###循环创建分析步
