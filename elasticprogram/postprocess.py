@@ -15,6 +15,12 @@ import csv
 # import brittle_assess
 import datetime
 datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
+def safe_del(name, container):
+    "若存在同名对象则先删除"
+    try:
+        del container[name]
+    except KeyError:
+        pass                  # 本来就没有
 def kernal_analsys(analysetype,
            CreepDamageField,FatigueDamageField,CFICriterion,CreepDamageFieldnum,FatigueDamageFieldnum,
            pathStyle,numIntervals,shape,
@@ -303,6 +309,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
             for frame_idx in all_frame_indices:
                 # 处理step_idx和frame_idx的组合
                 XYname="{}__step{}__frame{}".format(pthname,step_idx,frame_idx)
+                safe_del(XYname, session.xyDataObjects)
                 args=generate_xypath_data_args(XYname,pth,step_idx,frame_idx,variables,extraconfigs=path_extras_configs)
                 ###按步提取路径结果
                 xylist=getxyData_path(args)
@@ -395,6 +402,7 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
                 total_time += current_time
                 # 处理step_idx和frame_idx的组合
                 XYname="{}__step{}__frame{}".format(pthname,step_idx,frame_idx)
+                safe_del(XYname, session.xyDataObjects)
                 args=generate_xypath_data_args(XYname,pth,step_idx,frame_idx,user_variables,extraconfigs=path_extras_configs)
                 ###按步提取路径结果
                 xylist=getxyData_path(args)

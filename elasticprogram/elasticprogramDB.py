@@ -307,34 +307,47 @@ class SoftwareprogramDB(AFXDataDialog):
         # -----------------------  Paths 表：新增下拉框 ------------------------
 
         # 1) 创建下拉框列表并填充
-        listId_paths = self.table_paths.addList()
-        for inst in instance_list:
-            self.table_paths.appendListItem(listId_paths, inst)
-
-        # 2) 把第 1 行 (索引 1) 改为下拉框并绑定
-        self.table_paths.setColumnType(1, AFXTable.LIST)
-        self.table_paths.setColumnListId(1, listId_paths)
-        self.table_paths.setColumnWidth(1, 200)
-        # Populate the table with data
         data = []
         for pathname in session.paths.keys():
             p = session.paths[pathname]
-            if p.type == NODE_LIST:  # If NODE_LIST is a constant in Abaqus
+            if p.type == NODE_LIST:
                 for row in p.expression:
-                    data.append((p.name, row[0], str(row[1]).replace('(', '').replace(')', ''), False))
+                    # (路径名, 实例名, 节点标签, is_weld)
+                    data.append((p.name,
+                                row[0],
+                                str(row[1]).replace('(', '').replace(')', ''),
+                                False))
+        listId_paths   = self.table_paths.addList()
+        inst_index_map = {}
+        for idx, inst in enumerate(instance_list):
+            self.table_paths.appendListItem(listId_paths, inst)
+            inst_index_map[inst] = idx
 
-        # Populate the combo boxes for both columns (Path Name and Instance Name)
-        for row_index, row in enumerate(data):  # Use row_index to represent the row number
-            path_name, instance_name, node_labels, is_weld = row
-            # Append items to the "Path Name" combo box
-            self.table_paths.setItemValue(row_index+1, 0, path_name)
-            # Append items to the "Instance Name" combo box
-            self.table_paths.setItemValue(row_index+1, 1, instance_name)
-            self.table_paths.setItemText(row_index+1, 2, node_labels)
+        self.table_paths.setColumnType(1, AFXTable.LIST)
+        self.table_paths.setColumnListId(1, listId_paths)
+        self.table_paths.setColumnWidth(1, 200)
 
-        # Update the UI
+        # 4) 写入已有路径数据 --------------------------------------------------
+        for r, (path_name, instance_name, node_labels, is_weld) in enumerate(data, 1):
+            # 4-1 路径名称（文本列）
+            self.table_paths.setItemText(r, 0, path_name)
+
+            # 4-2 实例名称（LIST 列，用索引）
+            if instance_name not in inst_index_map:
+                new_idx = self.table_paths.appendListItem(listId_paths, instance_name)
+                inst_index_map[instance_name] = new_idx
+            self.table_paths.setItemValue(r, 1, str(inst_index_map[instance_name]))
+
+            # 4-3 节点标签（文本列）
+            self.table_paths.setItemText(r, 2, node_labels)
+
+            # 4-4 焊缝标记（BOOL 列）
+            self.table_paths.setItemValue(r, 3, 'True' if is_weld else 'False')
+
+        # 5) 刷新 UI、同步关键字 ----------------------------------------------
         self.getOwner().recalc()
         self.getOwner().repaint()
+        self.processTables()
 
         # Update widgets based on analysis type
         self.updateWidgetsByAnalyseType()
@@ -722,12 +735,15 @@ class SoftwareprogramDB(AFXDataDialog):
             u"第 {} 行:\n".format(i).encode('GB18030')
         )
             for j in range(cols):
-                val = table.getItemText(i, j)
-                col_type = table_kw.getColumnType(j)
+                col_type = table_kw.getColumnType(j)   # ← 先拿到列类型
+                if col_type == AFXTABLE_TYPE_BOOL:     # BOOL 列
+                    val = table.getItemValue(i, j)     # 返回 "1"/"0" 或 "True"/"False"
+                else:                                  # 其余列
+                    val = table.getItemText(i, j)
                 typename = type_map.get(col_type, 'UNKNOWN')
                 main_window.writeToMessageArea(
-                u"  列 {}: 值=[{}], 类型={}\n".format(j, val, typename).encode('GB18030')
-            )
+                    u"  列 {}: 值=[{}], 类型={}\n".format(j, val, typename).encode('GB18030')
+                )
         return 1
 
 ###########################################################################
