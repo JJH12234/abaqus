@@ -345,8 +345,8 @@ class SoftwareprogramDB(AFXDataDialog):
             self.table_paths.setItemValue(r, 3, 'True' if is_weld else 'False')
 
         # 5) 刷新 UI、同步关键字 ----------------------------------------------
-        self.getOwner().recalc()
-        self.getOwner().repaint()
+        # self.getOwner().recalc()
+        # self.getOwner().repaint()
         self.processTables()
 
         # Update widgets based on analysis type
@@ -518,8 +518,8 @@ class SoftwareprogramDB(AFXDataDialog):
             self.table_paths.setItemValue(row_index+1, 1, instance_name)
             self.table_paths.setItemText(row_index+1, 2, node_labels)
         # 强制刷新
-        self.getOwner().recalc()
-        self.getOwner().repaint()
+        # self.getOwner().recalc()
+        # self.getOwner().repaint()
         
 
     def onAnalyseTypeChanged(self, sender, sel, ptr):
@@ -603,8 +603,8 @@ class SoftwareprogramDB(AFXDataDialog):
             self.table_points.disable()
             self.tinkerBtn.enable()
 
-        self.getOwner().recalc()
-        self.getOwner().repaint()
+        # self.getOwner().recalc()
+        # self.getOwner().repaint()
         
     def onCFICriterionChanged(self, sender, sel, ptr):
 
@@ -659,8 +659,8 @@ class SoftwareprogramDB(AFXDataDialog):
             main_window.writeToMessageArea(" intervals...\n")
             self.spinner_intervals.disable()
         # 强制刷新
-        self.getOwner().recalc()
-        self.getOwner().repaint()
+        # self.getOwner().recalc()
+        # self.getOwner().repaint()
 
     def onExtrapolateTypeChanged(self, sender, sel, ptr):
             main_window = getAFXApp().getAFXMainWindow()
@@ -709,8 +709,8 @@ class SoftwareprogramDB(AFXDataDialog):
         )
             self.spinner_extrao.disable()
             self.Textfield_step.disable()
-        self.getOwner().recalc()
-        self.getOwner().repaint()
+        # self.getOwner().recalc()
+        # self.getOwner().repaint()
     
     def updatetable2kw(self, sender, sel, ptr):
         main_window = getAFXApp().getAFXMainWindow()

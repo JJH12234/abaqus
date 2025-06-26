@@ -413,7 +413,8 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
                     if varname in ['Mises','Tresca','Max. Principal','Min. Principal','Mid. Principal','Max. Principal (Abs)','S11','S22','S33','S12','S13','S23','Pressure']:
                         file_S.write('\t'.join(map(str, datas)) + '\n')
                         # print(u'正在写入file_S {}:step:{} {}/{}'.format(pthname,step_name,str(counter),len(all_frame_indices)).encode('GB18030'))
-                    elif varname=='NT11':
+                    # elif varname=='NT11':
+                    else:
                         file_T.write('\t'.join(map(str, datas)) + '\n')    
                         # print(u'正在写入file_T {}:step:{} {}/{}'.format(pthname,step_name,str(counter),len(all_frame_indices)).encode('GB18030'))
         file_S.close()
@@ -680,12 +681,13 @@ def generate_xypath_data_args(name,pth,step,fram, variables,extraconfigs={}):
                 pass
     args.update(extraconfigs)
     variable_args = build_variable_parameters(variables)
-    args.update({'name':name, #整合参数
+    args.update({'name':name+'-'+variables[0]['name'], #整合参数
             'path':pth,
             'step':step,
             'frame':fram,
             'variable':variable_args,
             })
+    # print(args['name'])
     return args
     
 def getxyData_point(args):
