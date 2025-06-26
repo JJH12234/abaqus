@@ -681,7 +681,7 @@ def generate_xypath_data_args(name,pth,step,fram, variables,extraconfigs={}):
                 pass
     args.update(extraconfigs)
     variable_args = build_variable_parameters(variables)
-    args.update({'name':name+'-'+variables[0]['name'], #整合参数
+    args.update({'name':name, #整合参数
             'path':pth,
             'step':step,
             'frame':fram,
