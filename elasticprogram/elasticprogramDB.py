@@ -217,6 +217,14 @@ class SoftwareprogramDB(AFXDataDialog):
         label=label_norm,
         key_name='myPluginPickedNodes'           # ← 另一唯一键名
     )
+        if form.picks1Kw.getValue():        # Keyword 里不为空
+            label_weld.setText(
+                label_weld.getText().replace('None', 'Picked')
+            )
+        if form.picks2Kw.getValue():
+            label_norm.setText(
+                label_norm.getText().replace('None', 'Picked')
+            )
         # self.pickHandler_points = SoftwareprogramDBPickHandler(form, form.picks2Kw, 'Pick an entity', NODES, MANY, label)
         icon = afxGetIcon('select', AFX_ICON_SMALL )
         self.button_points = FXButton(p=row_norm_pickHf, text='\tPick Items in Viewport', ic=icon, tgt=self.pickHandler_points, sel=AFXMode.ID_ACTIVATE,
