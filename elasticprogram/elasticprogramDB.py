@@ -49,6 +49,12 @@ class SoftwareprogramDB(AFXDataDialog):
     def __init__(self, form):
 
         # Construct the base class.
+        def ensure_customdata():
+            """保证 Kernel 端已 import customKernel，GUI 端可安全访问 session.customData"""
+            try:
+                _ = session.customData
+            except AttributeError:
+                sendCommand("import customKernel")
         self.form = form
         AFXDataDialog.__init__(self, form, u'非弹性分析工具'.encode('GB18030'),
             self.OK|self.APPLY|self.CANCEL, DIALOG_ACTIONS_SEPARATOR)
@@ -175,30 +181,51 @@ class SoftwareprogramDB(AFXDataDialog):
         GroupBox_1 = FXGroupBox(p=self, text=u'鼠标选点'.encode('GB18030'), opts=FRAME_GROOVE|LAYOUT_FILL_X)
         HFrame_1 = FXHorizontalFrame(p=GroupBox_1, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0)
-        pickHf = FXHorizontalFrame(p=HFrame_1, opts=0, x=0, y=0, w=0, h=0,
+        row_weld_pickHf = FXHorizontalFrame(p=HFrame_1, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
         # Note: Set the selector to indicate that this widget should not be
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
-        pickHf.setSelector(99)
-        label = FXLabel(p=pickHf, text=u'选取焊缝节点 (None)'.encode('GB18030'), ic=None, opts=LAYOUT_CENTER_Y|JUSTIFY_LEFT)
-        self.pickHandler_points_weld = SoftwareprogramDBPickHandler(form, form.picks1Kw, u'选取焊缝节点'.encode('GB18030'), NODES, MANY, label)
+        row_weld_pickHf.setSelector(99)
+        label_weld = FXLabel(p=row_weld_pickHf, text=u'选取焊缝节点 (None)'.encode('GB18030'), ic=None, opts=LAYOUT_CENTER_Y|JUSTIFY_LEFT)
+        self.pickHandler_points_weld = SoftwareprogramDBPickHandler(
+        form=form,
+        keyword=form.picks1Kw,
+        prompt=u'选取焊缝节点'.encode('GB18030'),
+        entitiesToPick=NODES,
+        numberToPick=MANY,
+        label=label_weld,
+        key_name='myPluginPickedNodesisweld'     # ← 唯一键名
+    )
+        # self.pickHandler_points_weld = SoftwareprogramDBPickHandler(form, form.picks1Kw, u'选取焊缝节点'.encode('GB18030'), NODES, MANY, label)
         icon = afxGetIcon('select', AFX_ICON_SMALL )
-        self.button_points_weld = FXButton(p=pickHf, text='\tPick Items in Viewport', ic=icon, tgt=self.pickHandler_points_weld, sel=AFXMode.ID_ACTIVATE,
+        self.button_points_weld = FXButton(p=row_weld_pickHf, text='\tPick Items in Viewport', ic=icon, tgt=self.pickHandler_points_weld, sel=AFXMode.ID_ACTIVATE,
             opts=BUTTON_NORMAL|LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=1, pb=1)
-        pickHf = FXHorizontalFrame(p=HFrame_1, opts=0, x=0, y=0, w=0, h=0,
+        row_norm_pickHf = FXHorizontalFrame(p=HFrame_1, opts=0, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0, hs=DEFAULT_SPACING, vs=DEFAULT_SPACING)
         # Note: Set the selector to indicate that this widget should not be
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
-        pickHf.setSelector(99)
-        label = FXLabel(p=pickHf, text=u'选取通常节点 (None)'.encode('GB18030'), ic=None, opts=LAYOUT_CENTER_Y|JUSTIFY_LEFT)
-        self.pickHandler_points = SoftwareprogramDBPickHandler(form, form.picks2Kw, 'Pick an entity', NODES, MANY, label)
+        row_norm_pickHf.setSelector(99)
+        label_norm = FXLabel(p=row_norm_pickHf, text=u'选取通常节点 (None)'.encode('GB18030'), ic=None, opts=LAYOUT_CENTER_Y|JUSTIFY_LEFT)
+        self.pickHandler_points = SoftwareprogramDBPickHandler(
+        form=form,
+        keyword=form.picks2Kw,
+        prompt='Pick an entity',
+        entitiesToPick=NODES,
+        numberToPick=MANY,
+        label=label_norm,
+        key_name='myPluginPickedNodes'           # ← 另一唯一键名
+    )
+        # self.pickHandler_points = SoftwareprogramDBPickHandler(form, form.picks2Kw, 'Pick an entity', NODES, MANY, label)
         icon = afxGetIcon('select', AFX_ICON_SMALL )
-        self.button_points = FXButton(p=pickHf, text='\tPick Items in Viewport', ic=icon, tgt=self.pickHandler_points, sel=AFXMode.ID_ACTIVATE,
+        self.button_points = FXButton(p=row_norm_pickHf, text='\tPick Items in Viewport', ic=icon, tgt=self.pickHandler_points, sel=AFXMode.ID_ACTIVATE,
             opts=BUTTON_NORMAL|LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=1, pb=1)
         vf = FXVerticalFrame(GroupBox_1, FRAME_SUNKEN|FRAME_THICK|LAYOUT_FILL_X,
             0,0,0,0, 0,0,0,0)
+        ensure_customdata()
+        # session.customData.myPluginPickedNodesisweld = form.picks1Kw.getValue()
+        # session.customData.myPluginPickedNodes       = form.picks2Kw.getValue()
         # Note: Set the selector to indicate that this widget should not be
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
@@ -517,6 +544,9 @@ class SoftwareprogramDB(AFXDataDialog):
             # Append items to the "Instance Name" combo box
             self.table_paths.setItemValue(row_index+1, 1, instance_name)
             self.table_paths.setItemText(row_index+1, 2, node_labels)
+            self.processTables()
+            return
+        
         # 强制刷新
         # self.getOwner().recalc()
         # self.getOwner().repaint()
@@ -745,46 +775,97 @@ class SoftwareprogramDB(AFXDataDialog):
                     u"  列 {}: 值=[{}], 类型={}\n".format(j, val, typename).encode('GB18030')
                 )
         return 1
+    def ensure_customdata():
+        """保证 Kernel 端已 import customKernel，GUI 端可安全访问 session.customData"""
+        try:
+            _ = session.customData
+        except AttributeError:
+            sendCommand("import customKernel")   # 仅第一次需要
+
+    def repo_get(repo, key, default=None):
+        """RepositorySupport 取值；若不存在返回 default"""
+        try:
+            return getattr(repo, key)
+        except AttributeError:
+            return default
+# -----------------------------------------------------------
 
 ###########################################################################
 # Class definition
 ###########################################################################
 
+# ----------------  SoftwareprogramDBPickHandler -----------------
 class SoftwareprogramDBPickHandler(AFXProcedure):
 
-        count = 0
+    count = 0
 
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        def __init__(self, form, keyword, prompt, entitiesToPick, numberToPick, label):
+    # -------------------------------------------------------------
+    def __init__(self, form, keyword, prompt,
+                 entitiesToPick, numberToPick,
+                 label, key_name):
+        # -------- 基本属性 ----------
+        self.form           = form
+        self.keyword        = keyword
+        self.prompt         = prompt
+        self.entitiesToPick = entitiesToPick
+        self.numberToPick   = numberToPick
+        self.label          = label
+        self.labelText      = label.getText()
+        self.key_name       = key_name            # ★ 唯一键名
 
-                self.form = form
-                self.keyword = keyword
-                self.prompt = prompt
-                self.entitiesToPick = entitiesToPick # Enum value
-                self.numberToPick = numberToPick # Enum value
-                self.label = label
-                self.labelText = label.getText()
+        AFXProcedure.__init__(self, form.getOwner())
+        SoftwareprogramDBPickHandler.count += 1
+        self.setModeName('SoftwareprogramDBPickHandler%d'
+                         % SoftwareprogramDBPickHandler.count)
 
-                AFXProcedure.__init__(self, form.getOwner())
+        # -------- Helper ----------
+        def ensure_customdata():
+            try:
+                _ = session.customData           # 已 import customKernel ?
+            except AttributeError:
+                sendCommand('import customKernel')
 
-                SoftwareprogramDBPickHandler.count += 1
-                self.setModeName('SoftwareprogramDBPickHandler%d' % (SoftwareprogramDBPickHandler.count) )
+        def repo_get(repo, key, default=''):
+            try:
+                return getattr(repo, key)
+            except AttributeError:
+                return default
 
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        def getFirstStep(self):
+        # -------- 恢复历史 ----------
+        ensure_customdata()
+        saved = repo_get(session.customData, self.key_name)
+        if saved:
+            self.keyword.setValue(0, saved)
+            self.label.setText(self.labelText.replace('None', 'Picked'))
 
-                return  AFXPickStep(self, self.keyword, self.prompt, 
-                    self.entitiesToPick, self.numberToPick, sequenceStyle=TUPLE)
+    # -------------------------------------------------------------
+    def getFirstStep(self):
+        return AFXPickStep(self, self.keyword, self.prompt,
+                           self.entitiesToPick, self.numberToPick,
+                           sequenceStyle=TUPLE)
 
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        def getNextStep(self, previousStep):
+    # -------------------------------------------------------------
+    def getNextStep(self, prevStep):
+        # 更新标签
+        self.label.setText(self.labelText.replace('None', 'Picked'))
 
-                self.label.setText( self.labelText.replace('None', 'Picked') )
-                return None
+        # 将本次选择写回 customData
+        def ensure_customdata():
+            try:
+                _ = session.customData
+            except AttributeError:
+                sendCommand('import customKernel')
+        ensure_customdata()
+        setattr(session.customData, self.key_name, self.keyword.getValue())
+        return None
 
-        def deactivate(self):
+    # -------------------------------------------------------------
+    def deactivate(self):
+        AFXProcedure.deactivate(self)
+        # 单选时高亮
+        if (self.numberToPick == ONE and self.keyword.getValue()
+                and self.keyword.getValue()[0] != '<'):
+            sendCommand(self.keyword.getSetupCommands() +
+                        '\nhighlight(%s)' % self.keyword.getValue())
 
-            AFXProcedure.deactivate(self)
-            if  self.numberToPick == ONE and self.keyword.getValue() and self.keyword.getValue()[0]!='<':
-                sendCommand(self.keyword.getSetupCommands() + '\nhighlight(%s)' % self.keyword.getValue() )
 
