@@ -131,8 +131,10 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 Damages[part][node]['FatigueDamageByCycle']=directExtrapolate(Damages[part][node]['FatigueDamageByCycle'],Step_configs['extrapolateTimes'])
                 Damages[part][node]['CreepDamageByCycle']=directExtrapolate(Damages[part][node]['CreepDamageByCycle'],Step_configs['extrapolateTimes'])
     elif Step_configs['extrapolateType']=='Add':
-        Damages[part][node]['FatigueDamageByCycle'].append(Damages[part][node]['FatigueDamageByCycle'][-1])
-        Damages[part][node]['CreepDamageByCycle'].append(Damages[part][node]['CreepDamageByCycle'][-1])
+        for part in Damages:
+            for node in Damages[part]:
+                Damages[part][node]['FatigueDamageByCycle'].append(Damages[part][node]['FatigueDamageByCycle'][-1])
+                Damages[part][node]['CreepDamageByCycle'].append(Damages[part][node]['CreepDamageByCycle'][-1])
         for stepname in Step_configs['addTypeStepNames']:
             # print(stepname)
             try:
