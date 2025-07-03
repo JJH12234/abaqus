@@ -384,25 +384,31 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
         file_S = open(file_Sname, 'w')
         file_T = open(file_Tname, 'w')
         # 遍历每个激活的分析步及其增量步
-        total_time = 0.0
+        # 预先计算每个分析步的累积时间
+        steps = list(odb.steps.values())
+        cumulative_times = [0.0]
+        for step in steps:
+            cumulative_times.append(cumulative_times[-1] + step.totalTime)
+        
         for step_info in odbData.activeFrames:
             step_name, frame_exprs = step_info
-            step_idx = step_indices[step_name]  # 外循环的索引
-            for i in range(step_idx):
-                total_time += odb.steps.values()[i].totalTime  # 累加每个Step的总时间
+            step_idx = step_indices[step_name]  # 当前分析步索引
+            prev_total_time = cumulative_times[step_idx]  # 获取之前所有步的总时间
+            
             # 解析所有增量步表达式，合并为一个列表
             all_frame_indices = []
             for expr in frame_exprs:
                 if isinstance(expr, str):
-                    # 如果是字符串表达式（如'0:17:1'），调用 parse_range 解析
                     all_frame_indices.extend(parse_range(expr))
                 else:
-                    # 如果是直接给出的整数（如元组中的离散值），直接添加到列表
                     all_frame_indices.append(expr)
+            
             # 内循环遍历每个激活的增量步索引
             for counter,frame_idx in enumerate(all_frame_indices,1):
-                current_time = odb.steps.values()[step_idx].frames[frame_idx].frameValue
-                total_time += current_time
+                # 当前frame在本分析步内的时间
+                frame_time = odb.steps.values()[step_idx].frames[frame_idx].frameValue
+                # 总时间 = 之前所有步总时间 + 当前frame时间
+                total_time = prev_total_time + frame_time
                 # 处理step_idx和frame_idx的组合
                 XYname="{}__step{}__frame{}".format(pthname,step_idx,frame_idx)
                 safe_del(XYname, session.xyDataObjects)
