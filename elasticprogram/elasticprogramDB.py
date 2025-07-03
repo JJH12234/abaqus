@@ -431,8 +431,9 @@ class SoftwareprogramDB(AFXDataDialog):
         # ── 4. 提示信息 ─────────────────────────────────────────────────
         mw = getAFXApp().getAFXMainWindow()
         mw.writeToMessageArea(
-            u"【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n"
-        )
+    u"【Tinker】脚本命令已发送，请在 Kernel Command 视图查看运行日志\n"
+    .encode('GB18030')          # ← 这里加 encode
+)
         return 1
 
     # ---------------------------------------------

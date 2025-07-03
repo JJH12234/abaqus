@@ -3,13 +3,14 @@
 脆断评定工具
 Python 2.7 + Tkinter（兼容 Abaqus 自带解释器）
 """
+
+from __future__ import unicode_literals
 import numpy as np
 import math
 import Tkinter as tk
 import tkFileDialog as filedialog
 import tkMessageBox as messagebox
 import csv
-import os, sys, subprocess, platform, threading, time
 from multiprocessing import freeze_support
 
 
@@ -60,7 +61,7 @@ def main(file_stress, file_temp, t, k,
          Tk=None, KIc_method=0, fixed_KIc=None):
     # 1. 读取数据
     data_stress = read_data(file_stress)
-    data_temp = read_data(file_temp)
+    data_temp   = read_data(file_temp)
 
     num_pts = data_stress.shape[1] - 1
     x = np.linspace(0, t, num_pts)
@@ -68,16 +69,16 @@ def main(file_stress, file_temp, t, k,
     # 2. 初始化结果容器
     time_col = data_stress[:, 0]
     sigma_p_list, sigma_q_list = [], []
-    KI_list, temp_list, KIc_list, result_list = [], [], [], [], []
+    KI_list, temp_list, KIc_list, result_list = [], [], [], []
 
     # 3. 循环处理每一行
     for i in range(data_stress.shape[0]):
         y_stress = data_stress[i, 1:]
-        y_temp = data_temp[i, 1:]
+        y_temp   = data_temp[i,   1:]
 
         # ─ 应力 ─
         coeffs_stress = quadratic_poly_fit(x, y_stress)
-        coeffs_int = integrate_polynomial(coeffs_stress)
+        coeffs_int    = integrate_polynomial(coeffs_stress)
         sigma_p = calculate_sigma_p(coeffs_int, t)
         sigma_q = data_stress[i, 1] - sigma_p
 
@@ -103,19 +104,25 @@ def main(file_stress, file_temp, t, k,
         KIc_list.append(KIc)
         result_list.append(verdict)
 
-    # 4. 保存 CSV
+    # 4. 保存 CSV（GBK 编码）
     out_csv = u"脆断评定结果.csv"
     with open(out_csv, "wb") as f:
         writer = csv.writer(f)
-        writer.writerow(
-            [u"时间", u"薄膜应力", u"弯曲应力", u"应力强度因子",
-             u"温度", u"断裂韧度", u"评估结果"]
-        )
+
+        headers = [u"时间", u"薄膜应力", u"弯曲应力",
+                   u"应力强度因子", u"温度", u"断裂韧度",
+                   u"评估结果"]
+        writer.writerow([h.encode("gbk") for h in headers])
+
         for i in range(len(time_col)):
             writer.writerow([
-                time_col[i], sigma_p_list[i], sigma_q_list[i],
-                KI_list[i], temp_list[i], KIc_list[i],
-                result_list[i].encode("utf-8")
+                time_col[i],
+                sigma_p_list[i],
+                sigma_q_list[i],
+                KI_list[i],
+                temp_list[i],
+                KIc_list[i],
+                result_list[i].encode("gbk")
             ])
 
     messagebox.showinfo(u"完成", u"计算结果已保存到 {}".format(out_csv))
@@ -138,18 +145,18 @@ def run_gui():
     def start():
         try:
             f_stress = ent_stress.get()
-            f_temp = ent_temp.get()
+            f_temp   = ent_temp.get()
             t_val = float(ent_t.get())
             k_val = float(ent_k.get())
 
-            method = int(var_method.get())
-            Tk_val = float(ent_Tk.get()) if method == 0 else None
-            KIc_fixed = float(ent_KIc.get()) if method == 1 else None
+            method  = int(var_method.get())
+            Tk_val  = float(ent_Tk.get())  if method == 0 else None
+            KIc_val = float(ent_KIc.get()) if method == 1 else None
 
             main(f_stress, f_temp, t_val, k_val,
-                 Tk=Tk_val, KIc_method=method, fixed_KIc=KIc_fixed)
+                 Tk=Tk_val, KIc_method=method, fixed_KIc=KIc_val)
         except Exception as e:
-            messagebox.showerror(u"错误", u"发生错误：{}".format(e))
+            messagebox.showerror(u"错误", u"发生错误：{}".format(unicode(e)))
 
     # ─ 创建窗口 ─
     root = tk.Tk()
@@ -158,7 +165,7 @@ def run_gui():
     root.configure(bg="#f0f0f0")
 
     f_large = ("Microsoft YaHei", 12)
-    f_mid = ("Microsoft YaHei", 10)
+    f_mid   = ("Microsoft YaHei", 10)
 
     # 行 0 : 应力文件
     tk.Label(root, text=u"应力数据文件:", bg="#f0f0f0", font=f_large
@@ -196,7 +203,7 @@ def run_gui():
     ent_Tk = tk.Entry(root, font=f_mid)
     ent_Tk.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
-    # 行 5 : KIc 计算方式（放到一个 Frame 中并排）
+    # 行 5 : KIc 计算方式
     tk.Label(root, text=u"KIc 计算方式:", bg="#f0f0f0", font=f_large
              ).grid(row=5, column=0, padx=10, pady=10, sticky="w")
 
