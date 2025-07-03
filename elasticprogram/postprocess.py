@@ -150,21 +150,21 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 field=xy.yValuesLabel.split(' ')[0]
                 if Damages[part][node]['isWeld']==True:
                     if field==CreDamUV:
-                        delta=(xy.data[-1][1]-xy.data[0][1])/CREEP_WELD_FATOR
-                        Damages[part][node]['AddCreepDamage_'+stepname]=max(0,delta)
+                        delta=max(0,(xy.data[-1][1]-xy.data[0][1])/CREEP_WELD_FATOR)
+                        Damages[part][node]['AddCreepDamage_'+stepname]=delta
                         Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
                     elif field==FatDamUV:
-                        delta=(xy.data[-1][1]-xy.data[0][1])/FATIGUE_WELD_FATOR
-                        Damages[part][node]['AddFatigueDamage_'+stepname]=max(0,delta)
+                        delta=max(0,(xy.data[-1][1]-xy.data[0][1])/FATIGUE_WELD_FATOR)
+                        Damages[part][node]['AddFatigueDamage_'+stepname]=delta
                         Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
                 else:
                     if field==CreDamUV:
-                        delta=(xy.data[-1][1]-xy.data[0][1])
-                        Damages[part][node]['AddCreepDamage_'+stepname]=max(0,delta)
+                        delta=max(0,(xy.data[-1][1]-xy.data[0][1]))
+                        Damages[part][node]['AddCreepDamage_'+stepname]=delta
                         Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
                     elif field==FatDamUV:
-                        delta=(xy.data[-1][1]-xy.data[0][1])
-                        Damages[part][node]['AddFatigueDamage_'+stepname]=max(0,delta)
+                        delta=max(0,(xy.data[-1][1]-xy.data[0][1]))
+                        Damages[part][node]['AddFatigueDamage_'+stepname]=delta
                         Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
     for part in Damages:
         for node in Damages[part]:
