@@ -151,11 +151,11 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 if Damages[part][node]['isWeld']==True:
                     if field==CreDamUV:
                         delta=(xy.data[-1][1]-xy.data[0][1])/CREEP_WELD_FATOR
-                        Damages[part][node]['AddCreepDamage_'+stepname]=delta
+                        Damages[part][node]['AddCreepDamage_'+stepname]=max(0,delta)
                         Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
                     elif field==FatDamUV:
                         delta=(xy.data[-1][1]-xy.data[0][1])/FATIGUE_WELD_FATOR
-                        Damages[part][node]['AddFatigueDamage_'+stepname]=delta
+                        Damages[part][node]['AddFatigueDamage_'+stepname]=max(0,delta)
                         Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
                 else:
                     if field==CreDamUV:
@@ -252,6 +252,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                                     IE[part][node]['CE'+component+'Add_'+stepname]=delta
                                     IE[part][node]['CE'+component][-1]+=delta*Step_configs['extrapolateTimes']
                                 if field=='PE:PE{}'.format(component):
+                                    IE[part][node]['PE'+component][-1] = max(IE[part][node]['PE'+component][:-1], key=abs)
                                     pass#等待考虑
     for part in IE:
         for node in IE[part]:
