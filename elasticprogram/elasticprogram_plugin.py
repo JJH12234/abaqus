@@ -30,6 +30,8 @@ class Softwareprogram_plugin(AFXForm):
         self.FatigueDamageFieldnumKw = AFXIntKeyword(self.cmd, 'FatigueDamageFieldnum', True, 31)
         self.pathStyleKw = AFXStringKeyword(self.cmd, 'pathStyle', True, 'UNIFORM_SPACING')
         self.numIntervalsKw = AFXIntKeyword(self.cmd, 'numIntervals', True, 20)
+        self.CREEP_WELD_FATORKw = AFXFloatKeyword(self.cmd, 'CREEP_WELD_FATOR', True, 0.9)
+        self.FATIGUE_WELD_FATORKw = AFXFloatKeyword(self.cmd, 'FATIGUE_WELD_FATOR', True, 0.5)
         if not self.radioButtonGroups.has_key('shape'):
             self.shapeKw1 = AFXIntKeyword(None, 'shapeDummy', True)
             self.shapeKw2 = AFXStringKeyword(self.cmd, 'shape', True)
