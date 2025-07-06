@@ -172,7 +172,7 @@ C USER DEFEND TOP
       ignoreStep={{ignoreStep}}     !不参与疲劳蠕变计算的分析步
       NResetStep={{NResetStep}}     !循环节长度
       Time1forFatigue={{Time1forFatigue}}   !循环最后一分析步最终时刻
-      MinCreepTemp={{MinCreepTemp}}         !蠕变门槛温度
+      MinCreepTemp=371D0         !蠕变门槛温度
 C USER DEFEND BOTTOM
 C FatigueStrainRangeCommand top
       IF (KSTEP.EQ.1.AND.KINC.EQ.0) THEN !Initial步 重置预设值
