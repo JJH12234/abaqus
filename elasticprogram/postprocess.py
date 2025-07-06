@@ -222,9 +222,9 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                     if IE[part][node]['PE'+component] and IE[part][node]['CE'+component]:
                         #CE分量直接外推
                         IE[part][node]['CE'+component]=directExtrapolate(IE[part][node]['CE'+component],Step_configs['extrapolateTimes'])
-                        if max(IE[part][node]['PE'+component])>IE[part][node]['PE'+component][-1]:
-                            #对于最后一步PE分量并非最大值的情况，直接多次复制最大值
-                            IE[part][node]['PE'+component]=IE[part][node]['PE'+component]+[max(IE[part][node]['PE'+component])]*Step_configs['extrapolateTimes']
+                        if abs(max(IE[part][node]['PE'+component],key=abs))>abs(IE[part][node]['PE'+component][-1]):
+                            #对于最后一步PE分量绝对值并非最大的情况，直接多次复制绝对值最大值
+                            IE[part][node]['PE'+component]=IE[part][node]['PE'+component]+[max(IE[part][node]['PE'+component], key=abs)]*Step_configs['extrapolateTimes']
                         else:
                             #否则，直接外推
                             IE[part][node]['PE'+component]=directExtrapolate(IE[part][node]['PE'+component],Step_configs['extrapolateTimes'])
