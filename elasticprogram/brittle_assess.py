@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-脆断评定工具
+脆断评定工具（可输入 η 系数）
 Python 2.7 + Tkinter（兼容 Abaqus 自带解释器）
 """
 
@@ -36,9 +36,10 @@ def calculate_sigma_p(integ_coeffs, t):
     return np.polyval(integ_coeffs, t) / t
 
 
-def calculate_KI(sigma_p, sigma_q, t):
-    """应力强度因子 KI"""
-    return (sigma_p * 1.08 + sigma_q * 0.68) * (math.pi * 0.25 * t / 1000.0) ** 0.5 * 1.11
+def calculate_KI(sigma_p, sigma_q, t, eta):
+    """应力强度因子 KI = η·(σ_p M_p + σ_q M_q)·√(πa/10³)/Q
+       其中  M_p=1.08、M_q=0.68、Q≈0.9 → 1/ Q≈1.11  已含在旧公式里 """
+    return (eta * (sigma_p * 1.08 + sigma_q * 0.68) * (math.pi * 0.25 * t / 1000.0) ** 0.5 )/ 1.11
 
 
 def calculate_temperature(coeffs, t):
@@ -58,7 +59,7 @@ def assess_KI_vs_KIc(KI, KIc, k):
 
 # ──────────────────────────────── 计算主流程 ────────────────────────────────
 def main(file_stress, file_temp, t, k,
-         Tk=None, KIc_method=0, fixed_KIc=None):
+         eta=1.0, Tk=None, KIc_method=0, fixed_KIc=None):
     # 1. 读取数据
     data_stress = read_data(file_stress)
     data_temp   = read_data(file_temp)
@@ -82,7 +83,7 @@ def main(file_stress, file_temp, t, k,
         sigma_p = calculate_sigma_p(coeffs_int, t)
         sigma_q = data_stress[i, 1] - sigma_p
 
-        KI = calculate_KI(sigma_p, sigma_q, t)
+        KI = calculate_KI(sigma_p, sigma_q, t, eta)
 
         # ─ 温度 ─
         coeffs_temp = quadratic_poly_fit(x, y_temp)
@@ -132,7 +133,8 @@ def main(file_stress, file_temp, t, k,
 def run_gui():
     # ─ 内部工具函数 ─
     def browse(file_tag):
-        path = filedialog.askopenfilename(filetypes=[(u"{} 文件".format(file_tag), "*.txt")])
+        path = filedialog.askopenfilename(
+            filetypes=[(u"{} 文件".format(file_tag), "*.txt")])
         if not path:
             return
         if file_tag == u"应力":
@@ -146,14 +148,16 @@ def run_gui():
         try:
             f_stress = ent_stress.get()
             f_temp   = ent_temp.get()
-            t_val = float(ent_t.get())
-            k_val = float(ent_k.get())
+            t_val  = float(ent_t.get())
+            k_val  = float(ent_k.get())
+            eta_val = float(ent_eta.get())    # ← 取 η
 
             method  = int(var_method.get())
             Tk_val  = float(ent_Tk.get())  if method == 0 else None
             KIc_val = float(ent_KIc.get()) if method == 1 else None
 
             main(f_stress, f_temp, t_val, k_val,
+                 eta=eta_val,
                  Tk=Tk_val, KIc_method=method, fixed_KIc=KIc_val)
         except Exception as e:
             messagebox.showerror(u"错误", u"发生错误：{}".format(unicode(e)))
@@ -161,7 +165,7 @@ def run_gui():
     # ─ 创建窗口 ─
     root = tk.Tk()
     root.title(u"防脆断评定工具")
-    root.geometry("850x450")
+    root.geometry("880x520")
     root.configure(bg="#f0f0f0")
 
     f_large = ("Microsoft YaHei", 12)
@@ -197,18 +201,26 @@ def run_gui():
     ent_k = tk.Entry(root, font=f_mid)
     ent_k.grid(row=3, column=1, padx=10, pady=10, sticky="w")
 
-    # 行 4 : 参考温度 Tk
-    tk.Label(root, text=u"参考温度 (Tk):", bg="#f0f0f0", font=f_large
+    # 行 4 : η 系数
+    tk.Label(root, text=u"η 系数:", bg="#f0f0f0", font=f_large
              ).grid(row=4, column=0, padx=10, pady=10, sticky="w")
-    ent_Tk = tk.Entry(root, font=f_mid)
-    ent_Tk.grid(row=4, column=1, padx=10, pady=10, sticky="w")
+    ent_eta = tk.Entry(root, font=f_mid)
+    ent_eta.insert(0, "1.0")           # 默认 1.0
+    ent_eta.grid(row=4, column=1, padx=10, pady=10, sticky="w")
 
-    # 行 5 : KIc 计算方式
-    tk.Label(root, text=u"KIc 计算方式:", bg="#f0f0f0", font=f_large
+    # 行 5 : 参考温度 Tk
+    tk.Label(root, text=u"参考温度 (Tk):", bg="#f0f0f0", font=f_large
              ).grid(row=5, column=0, padx=10, pady=10, sticky="w")
+    ent_Tk = tk.Entry(root, font=f_mid)
+    ent_Tk.grid(row=5, column=1, padx=10, pady=10, sticky="w")
+
+    # 行 6 : KIc 计算方式
+    tk.Label(root, text=u"KIc 计算方式:", bg="#f0f0f0", font=f_large
+             ).grid(row=6, column=0, padx=10, pady=10, sticky="w")
 
     frame_method = tk.Frame(root, bg="#f0f0f0")
-    frame_method.grid(row=5, column=1, columnspan=2, padx=10, pady=10, sticky="w")
+    frame_method.grid(row=6, column=1, columnspan=2,
+                      padx=10, pady=10, sticky="w")
 
     var_method = tk.StringVar(value="0")
     tk.Radiobutton(frame_method, text=u"按公式计算",
@@ -220,17 +232,17 @@ def run_gui():
                    font=f_mid, bg="#f0f0f0"
                    ).pack(side="left", padx=5)
 
-    # 行 6 : 固定 KIc 值
+    # 行 7 : 固定 KIc 值
     tk.Label(root, text=u"固定 KIc 值:", bg="#f0f0f0", font=f_large
-             ).grid(row=6, column=0, padx=10, pady=10, sticky="w")
+             ).grid(row=7, column=0, padx=10, pady=10, sticky="w")
     ent_KIc = tk.Entry(root, font=f_mid)
-    ent_KIc.grid(row=6, column=1, padx=10, pady=10, sticky="w")
+    ent_KIc.grid(row=7, column=1, padx=10, pady=10, sticky="w")
 
-    # 行 7 : 开始按钮
+    # 行 8 : 开始按钮
     tk.Button(root, text=u"开始计算", command=start,
               bg="teal", fg="white",
               font=("Microsoft YaHei", 14), width=20
-              ).grid(row=7, column=0, columnspan=3, pady=25)
+              ).grid(row=8, column=0, columnspan=3, pady=25)
 
     root.mainloop()
 

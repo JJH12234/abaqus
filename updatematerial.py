@@ -10,8 +10,81 @@ from collections import OrderedDict
 import os
 import re
 import inspect
+import json
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 script_dir     = os.path.dirname(os.path.abspath(filename))
+# ---------- 缩进常量 ----------
+_IND1      = '      '     # 一级：6 空格
+_IND_STEP  = '   '        # if 嵌套每多一级：+3 空格
+_IND_CONT  = '     '      # 行首续行符 & 使用 5 空格
+
+# ---------- 正则 ----------
+_RE_COMMENT   = re.compile(r'^[cC\*!]')                       # 列 1 注释
+_RE_INC_MIS   = re.compile(r'^[cC]\s*INCLUDE\s+\'ABA', re.I)
+_RE_PARAM     = re.compile(r'^\s*(temp\d+|x_[A-Za-z]\w*)\s*=', re.I)
+_RE_IFLINE    = re.compile(r'\b(if\b.*then|else\b|elseif\b|end\s*if\b)', re.I)
+
+def _fix_block_spacing(txt):
+    """
+    把一段 UHARD / CREEP Fortran 代码的缩进、注释对齐到示范格式
+    """
+    out   = []
+    depth = 0                     # 当前 IF 嵌套层数
+
+    for raw in txt.splitlines():
+        ln  = raw.rstrip()        # 不动结尾续行 &
+        lns = ln.lstrip()
+
+        # ---------- 0. 修错 INCLUDE ----------
+        if _RE_INC_MIS.match(ln):
+            out.append(_IND1 + "INCLUDE 'ABA_PARAM.INC'")
+            continue
+
+        # ---------- 1. 注释行 ----------
+        if _RE_COMMENT.match(ln):
+            out.append(lns)        # 顶格
+            continue
+
+        # ---------- 2. 续行符 & ----------
+        if lns.startswith('&'):
+            out.append(_IND_CONT + lns)
+            continue
+
+        # ---------- 3. IF / ELSE / ELSEIF / END IF ----------
+        m_if = _RE_IFLINE.search(ln)
+        if m_if:
+            indent = _IND1 + _IND_STEP * depth
+            kw = m_if.group(1).lower()
+
+            if kw.startswith('end'):          # END IF
+                depth = max(depth - 1, 0)
+                indent = _IND1 + _IND_STEP * depth
+                out.append(indent + lns)
+                continue
+
+            if kw.startswith('else'):         # ELSE / ELSEIF
+                depth = max(depth - 1, 0)
+                indent = _IND1 + _IND_STEP * depth
+                out.append(indent + lns)
+                if lns.endswith('then'):
+                    depth += 1
+                continue
+
+            # 普通 IF … THEN
+            out.append(indent + lns)
+            depth += 1
+            continue
+
+        # ---------- 4. “参数常量行” 仅最外层 6 空格 ----------
+        if _RE_PARAM.match(ln) and depth == 0:
+            out.append(_IND1 + lns)
+            continue
+
+        # ---------- 5. 其它可执行语句 ----------
+        indent = _IND1 + _IND_STEP * depth
+        out.append(indent + lns)
+
+    return '\n'.join(out)
 def get_current_model():
     """获取当前视口关联的模型"""
     flag=None
@@ -71,9 +144,9 @@ def pre_materialImport_main(jsondata,aimMaterialName,UVARMnum,SDVnum):
         if getattr(mm,'userDefinedField',None):
             del mm.userDefinedField
     # print(process_dict(fortran_data))
-    Creep,user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type = pre_materialImport(jsondata)
+    Creep, Plastic, user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type = pre_materialImport(jsondata)
     fortran_name=aimMaterialName
-    generate_Fortran(Creep,user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type,fortran_name)
+    generate_Fortran(Creep,Plastic, user_EquivS,user_Tr,user_Nd, user_CFInter,user_Type,fortran_name)
     return 
 # 定义一个递归函数来处理字典
 def process_dict(d, path=None):
@@ -328,11 +401,12 @@ def addproperty(mm, datarow):
 def pre_materialImport(jsondata):
     #jsondata应该是多级字典结构
     filtered_data = {k: v for k, v in jsondata.items()
-                     if k.startswith("user_") or k.startswith("Creep")} #仅需要传入子程序的参数
+                     if k.startswith("user_") or k.startswith("Creep") or k.startswith("Plastic")} #仅需要传入子程序的参数
     # 递归处理字典为扁平化列表
     flat_data = process_dict(filtered_data)
     # 初始化分类容器
     Creep = []
+    Plastic = []
     user_RepresentativeStress = []
     user_CreepRuptureLife = []
     user_FatigueLife = []
@@ -342,7 +416,7 @@ def pre_materialImport(jsondata):
         if flat_data[i][0] == "Creep" and flat_data[i][1] == 'User_defined':
             Creep = flat_data[i]
         elif flat_data[i][0] == "Plastic" and flat_data[i][1] == 'User':
-            pass#待补充UHARD
+            Plastic = flat_data[i]
         elif flat_data[i][0] == "user_RepresentativeStress":
             user_RepresentativeStress = flat_data[i]
         elif flat_data[i][0] == "user_CreepRuptureLife":
@@ -353,7 +427,7 @@ def pre_materialImport(jsondata):
             user_CreepFatigueInteractionCriterion = flat_data[i]
         elif flat_data[i][0] == "user_AnalysisType":
             user_AnalysisType = flat_data[i]
-    return Creep,user_RepresentativeStress,user_CreepRuptureLife,\
+    return Creep, Plastic, user_RepresentativeStress,user_CreepRuptureLife,\
            user_FatigueLife,user_CreepFatigueInteractionCriterion,\
            user_AnalysisType
 # 定义一个递归函数来处理字典
@@ -369,7 +443,7 @@ def process_dict(d, path=None):
     return result
 
 # 生成fortran文件的总体思路
-def generate_Fortran(Creep=[],user_EquivS=[],user_Tr=[],user_Nd=[], user_CFInter=[],user_Type=[],materialName=''):
+def generate_Fortran(Creep=[],Plastic=[], user_EquivS=[],user_Tr=[],user_Nd=[], user_CFInter=[],user_Type=[],materialName=''):
     # 获取当前脚本所在目录的绝对路径
     template_name = "fortranBase/M225Cr1MoMuBan.for"
     # 构建模板文件的完整路径（假设模板文件与脚本同目录）
@@ -385,12 +459,14 @@ def generate_Fortran(Creep=[],user_EquivS=[],user_Tr=[],user_Nd=[], user_CFInter
         user_CFInterFortran = generate_user_CreepFatigueInteractionCriterion(user_NdFortran,user_CFInter)
     if user_EquivS:
         user_EquivSFortran = generate_user_RepresentativeStress(user_CFInterFortran,user_EquivS)
+    if Plastic:
+        user_PlasticFortran = generate_user_Plastic(user_EquivSFortran, Plastic)
     else:
-        user_EquivSFortran=''
+        user_PlasticFortran = ''
     # 写出最终 For 文件
     fortran_file_path='{}\\{}.for'.format(script_dir,materialName)
     with open(fortran_file_path, 'w') as f:
-        f.write(user_EquivSFortran)  # 将生成的 Fortran 代码写入文件
+        f.write(user_PlasticFortran)  # 将生成的 Fortran 代码写入文件
     print(u'{}.for 已输出到 {}'.format(materialName,script_dir).encode('GB18030'))
     return fortran_file_path
 
@@ -409,6 +485,11 @@ def generate_creep_subroutine(template_path,Creep):
         updated_contentCE = CreepNBPN_q0()
     elif model == "RCC_q0":
         updated_contentCE = CreepRCC_q0()
+    elif model == 'ASME_225Cr1Mo':
+        updated_contentCE = ''            # 后面不再用
+        template_content = Creep_ASME225Cr1Mo(open(template_path).read())
+        return template_content            # 直接回主流程
+
     else:
         print(u"不支持的蠕变子程序类型：{}".format(model).encode('GB18030'))
         return 0
@@ -487,6 +568,41 @@ def generate_creep_subroutine(template_path,Creep):
         flags=re.DOTALL
     )
     return updated_content1
+def generate_user_Plastic(prev_fortran_txt, Plastic_row):
+    """
+    prev_fortran_txt : 前面几步已经拼好的整段 Fortran 文本
+    Plastic_row      : 形如
+        ['Plastic','User','ASME_225Cr1Mo','ver2021', []]
+    """
+    model = Plastic_row[2]        # 'ASME_225Cr1Mo'
+    version = Plastic_row[3]      # 'ver2021' 这里只先不细分
+
+    # 目前只支持 2.25Cr-1Mo 这一个模板，后面想扩也很容易
+    if model == 'ASME_225Cr1Mo':
+        tpl_path = os.path.join(
+            script_dir,
+            r'fortranBase\2.25Cr-1Mo_Uhard_Creep.for'
+        )
+    else:
+        raise ValueError('暂不支持的 UHARD 模型: {}'.format(model))
+
+    with open(tpl_path, 'r') as f:
+        whole_tpl = f.read()
+
+    # --- 用正则把 UHARD 子程序抠出来 --------------------
+    #   ^\s*SUBROUTINE\s+UHARD   …   ^\s*END\s*$   （跨行、大小写无关）
+    m = re.search(r'^\s*SUBROUTINE\s+UHARD.*?^\s*END\s*$',
+                  whole_tpl, flags=re.S | re.I | re.M)
+    if not m:
+        raise RuntimeError('没在模板里找到 UHARD 子程序')
+
+    uhard_sub = m.group(0).strip()          # 先拿到原始文本
+    uhard_sub = _fix_block_spacing(uhard_sub)   # ← 再做缩进/对齐修正
+
+    # ── 3. 拼回主文件 ─────────────────────────────────────
+    merged = prev_fortran_txt.rstrip() + '\n\n' + uhard_sub + '\n'
+    return merged
+
 # 选用哪个蠕变本构方程插入
 def CreepNB_SH_q0():
     # 获取当前脚本所在目录的绝对路径
@@ -520,6 +636,31 @@ def CreepRCC_q0():
     with open(template_path_Direct, 'r') as f:
         CEtemplate_content = f.read()
     return CEtemplate_content
+def Creep_ASME225Cr1Mo(tpl_txt):
+    """tpl_txt 已是整段模板文本，返回替换后的文本"""
+    ext = open(os.path.join(script_dir,
+            r'fortranBase/2.25Cr-1Mo_Uhard_Creep.for')).read()
+
+    # 把外部文件里的 SUBROUTINE CREEP(...) … END 抠出来
+    import re
+    m = re.search(r'^\s*SUBROUTINE\s+CREEP\b.*?^\s*END\s*$',
+              ext, flags=re.I | re.M | re.S)
+    if not m:
+        raise RuntimeError('外部文件里找不到 SUBROUTINE CREEP')
+
+    creep_txt = m.group(0).strip()   # ① 先拿到原始子程序文本
+    creep_txt = _fix_block_spacing(creep_txt)   # ② 再做缩进/对齐修正     # ← 同理
+    # 用它“顶掉”模板里原来的第一段 CREEP
+    tpl_txt = re.sub(r'^\s*SUBROUTINE\s+CREEP\b.*?^\s*END\s*$',
+                     creep_txt, tpl_txt, count=1, flags=re.I|re.S|re.M)
+
+    # 再把 {{CreepCE_X}} 整体删掉（或改成 "CREEP" ）
+    tpl_txt = tpl_txt.replace('{{CreepCE_X}}', 'CREEP')
+
+    # 蠕变参数区清空
+    tpl_txt = re.sub(r'(!CREEP_PARAMS_START\s*).*?(!CREEP_PARAMS_END)',
+                     r'\1\n\2', tpl_txt, flags=re.S)
+    return tpl_txt
 
 
 
@@ -958,8 +1099,53 @@ def ASME(SF,C,MTYPE,user_CFInterFortran):
     return updated_content
 
 if __name__ == '__main__':
-    jsondata={'Conductivity': {'Isotropic': {'ASME': [[36.4, 40], [36.9, 100], [37.1, 150], [37.2, 175], [37.2, 200], [37.2, 225], [37.1, 250], [36.9, 275], [36.7, 300], [36.5, 325], [36.2, 350], [35.8, 375], [35.4, 400], [35, 425], [34.6, 450], [34.2, 475], [33.7, 500], [33.3, 525], [32.8, 550]]}}, 'Elastic': {'Isotropic': {'GZ_2023Tests': [[212894.25, 0.3, 20], [212894.25, 0.3, 200], [190503.42, 0.3, 400], [181957.66, 0.3, 482], [181900.33, 0.3, 510]]}}, 'Density': {'Uniform': {'ASME': [[7.75e-09]]}}}
-    aimMaterialName=getInput('Which Material','M225Cr1Mo')
-    UVARMnum=33 
-    SDVnum=0
-    pre_materialImport_main(jsondata,aimMaterialName,UVARMnum,SDVnum)
+    JSON_PATH = (r'D:\SIMULIA\EstProducts\2023\win_b64\code\python2.7'
+                r'\lib\abaqus_plugins\STPM_test1034\MaterialData.json')
+
+    # ===== ② 读取数据库，只要 2.25Cr1Mo 这一支 =====
+    with open(JSON_PATH, 'r') as fp:
+        all_mat_db = json.load(fp)
+
+    MAT_KEY = '2.25Cr1Mo'            # JSON 里外层键
+    try:
+        mat_json = all_mat_db[MAT_KEY]
+    except KeyError:
+        raise RuntimeError('MaterialData.json 里没有 “2.25Cr1Mo” 这一条!')
+
+    # ===== ③ 依照界面勾选, 只保留 √ 的那两条 =============
+    SEL_MODEL = 'ASME_225Cr1Mo'      # 勾选的子模型
+    SEL_VER   = 'ver2021'
+
+    # ---- 3.1  Creep → User_defined -----------------------
+    creep_user = mat_json.setdefault('Creep', {}) \
+                        .setdefault('User_defined', {})
+
+    # 把同级的 NB_TH_q0 / NB_SH_q0 … 都干掉，只留 ASME_225Cr1Mo
+    for sub in list(creep_user.keys()):
+        if sub != SEL_MODEL:
+            creep_user.pop(sub)
+
+    creep_user.setdefault(SEL_MODEL, {}) \
+            .setdefault(SEL_VER, [])       # 保证路径存在 (空列表即可)
+
+    # ---- 3.2  Plastic → User -----------------------------
+    plast_user = mat_json.setdefault('Plastic', {}) \
+                        .setdefault('User', {})
+
+    for sub in list(plast_user.keys()):
+        if sub != SEL_MODEL:
+            plast_user.pop(sub)
+
+    plast_user.setdefault(SEL_MODEL, {}) \
+            .setdefault(SEL_VER, [])
+
+    # ===== ④ 调用你的主入口 ================================
+    aimMaterialName = 'M225Cr1Mo'   # Abaqus Model 里的材料名
+    UVARMnum        = 33
+    SDVnum          = 0
+
+    pre_materialImport_main(mat_json,
+                            aimMaterialName,
+                            UVARMnum,
+                            SDVnum)
+
