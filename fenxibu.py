@@ -4,10 +4,11 @@ Created on Fri Mar  7 02:00:24 2025
 
 @author: mrvoid
 """
-
+import os, glob, re
 from abaqus import *
 from abaqusConstants import *
 from collections import Counter, defaultdict
+
 def get_current_model():
     """获取当前视口关联的模型"""
     flag=None
@@ -193,11 +194,24 @@ def pre_stepBuild(bstep, csteplist, steptimepair, astep, cyctimes, modeltype=Non
                 m.FieldOutputRequest(name='F-Output-0',#再创建场输出
                                       createStepName=new_name,
                                       variables=fieldOutputRequestsMap(m,modeltype))
-    NResetStep=len(csteplist)
-    Time1forFatigue=steptimepair[csteplist[-1]]
-    fortran_editer(fortfilepath,ignoreStep,NResetStep,Time1forFatigue)
-    if refreshFlag:
-        refreshMdb(mdb.pathName,m.name)
+    def _calc_ignore(mdb_model, first_cycle_tag):
+        """
+        统计 'Initial' 之后、第一次出现 first_cycle_tag 之前
+        已存在多少个分析步。
+        """
+        steps = [s for s in mdb_model.steps.keys() if s != 'Initial']
+        print("first_cycle_tagis:", first_cycle_tag)
+        # enumerate 保证 0-based 计数，正好就是 ignoreStep
+        return next((idx      # idx=0,1,2,…
+                    for idx, s in enumerate(steps)
+                    if first_cycle_tag in s),
+                    len(steps))   # 没找到就全部忽略
+
+    ignoreStep      = _calc_ignore(m, csteplist[0])  # ← m 是当前模型
+    NResetStep      = len(csteplist)
+    Time1forFatigue = steptimepair[csteplist[-1]]
+
+    fortran_editer(ignoreStep, NResetStep, Time1forFatigue)
 
 def refreshMdb(path,modelname):
     #对于abaqusCAE不刷新Bug，建议保存再读取
@@ -217,13 +231,54 @@ def pre_stepModify(stepnamelist,edittype,value):
         except Exception as e:
             print("Error in Modify step {st}: {er}".format(st=step,er=str(e)))
 
-def fortran_editer(fortfilepath,ignoreStep,NResetStep,Time1forFatigue):
-    '''
-158      ignoreStep={{ignoreStep}}     !不参与疲劳蠕变计算的分析步
-159      NResetStep={{NResetStep}}     !循环节长度
-160      Time1forFatigue={{Time1forFatigue}}   !循环最后一分析步最终时刻
-    '''
-    pass
+def fortran_editer(ignoreStep, NResetStep, Time1forFatigue):
+    """
+    在插件根目录递归搜索所有 *.for（排除 fortranBase），
+    将占位符一次性替换为运行时参数:
+
+        {{ignoreStep}}      ->  int(ignoreStep)
+        {{NResetStep}}      ->  int(NResetStep)
+        {{Time1forFatigue}} ->  float(Time1forFatigue)
+        {{MinCreepTemp}}    ->  371   (固定写死)
+
+    Parameters
+    ----------
+    ignoreStep : int
+    NResetStep : int
+    Time1forFatigue : float
+    """
+    # 1. 插件根目录 = 当前脚本所在目录
+    plugin_dir   = os.path.dirname(os.path.abspath(__file__))
+    base_exclude = os.path.join(plugin_dir, 'fortranBase')
+
+    # 2. 占位符 → 字符串映射
+    repl_map = {
+        r'\{\{\s*ignoreStep\s*\}\}'      : str(int(ignoreStep)),
+        r'\{\{\s*NResetStep\s*\}\}'      : str(int(NResetStep)),
+        r'\{\{\s*Time1forFatigue\s*\}\}' : str(float(Time1forFatigue)),
+        r'\{\{\s*MinCreepTemp\s*\}\}'    : '371',
+    }
+
+    # 3. 扫描并替换
+    for root, dirs, files in os.walk(plugin_dir):
+        # 跳过模板目录
+        if root.startswith(base_exclude):
+            continue
+        for fn in files:
+            if fn.lower().endswith('.for'):
+                fpath = os.path.join(root, fn)
+
+                with open(fpath, 'r') as f:
+                    txt = f.read()
+
+                new_txt = txt
+                for pat, rep in repl_map.items():
+                    new_txt = re.sub(pat, rep, new_txt, flags=re.I)
+
+                if new_txt != txt:            # 只有修改才写回
+                    with open(fpath, 'w') as f:
+                        f.write(new_txt)
+                    print(u'[fortran_editer] 已更新: {}'.format(fpath).encode('gb18030'))
 
 def fieldOutputRequestsMap(m,modeltype):
     variables=[]
