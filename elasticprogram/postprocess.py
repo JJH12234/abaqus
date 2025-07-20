@@ -767,8 +767,8 @@ def numpy_linear_regression(points):
     t=x.max()-x.min()
     c=(x.max()+x.min())/2
     sigma_m=np.trapz(x=x,y=y)/t
-    intercept=-6.0*np.trapz(x=x,y=y*(x-c))/t**2
-    return sigma_m,sigma_m+intercept,sigma_m-intercept
+    sigma_b=-6.0*np.trapz(x=x,y=y*(x-c))/t**2
+    return sigma_m,sigma_m+sigma_b,sigma_m-sigma_b
 
 
 def write_to_tsv(filename, data, is_first_write=False):
