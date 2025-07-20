@@ -5,6 +5,7 @@ from kernelAccess import mdb, session
 import os
 import json
 import xlrd
+import traceback
 from collections import OrderedDict, Counter, defaultdict
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 # os.chdir(PLUGIN_DIR)
@@ -1210,7 +1211,6 @@ class STPM_test1033DB(AFXDataDialog):
 
         except Exception as e:
             mw.writeToMessageArea(u"创建分析步时出错: '{}'".format(unicode(str(e), 'utf-8', errors='replace')).encode('GB18030'))
-            import traceback
             error_trace = traceback.format_exc()
             mw.writeToMessageArea(error_trace)
 
