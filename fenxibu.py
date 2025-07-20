@@ -15,8 +15,9 @@ def get_current_model():
     viewport = session.currentViewportName
     modelname=session.sessionState[viewport]['modelName']
     if 'Model-0' in modelname:
+        print(u'请在弹出窗口执行操作（如未见弹窗可能被遮挡）'.encode('GB18030'))
         flag=getWarningReply(
-            u'警告：不建议用户自行编辑Model-0 \n YES以继续; No以复制;'.encode('GB18030'), (YES,NO,CANCEL))
+            u'警告：不建议用户自行编辑Model-0 \n YES以继续（可能意外导致崩溃）; No以复制;'.encode('GB18030'), (YES,NO,CANCEL))
     if flag==NO:
         newname=modelname.replace('Model-0','NewModel')
         if newname in mdb.models.keys():
@@ -216,6 +217,7 @@ def pre_stepBuild(bstep, csteplist, steptimepair, astep, cyctimes, modeltype=Non
         refreshMdb(mdb.pathName,m.name)
 def refreshMdb(path,modelname):
     #对于abaqusCAE不刷新Bug，建议保存再读取
+    print(u'请在弹出窗口执行操作（如未见弹窗可能被遮挡）'.encode('GB18030'))
     flag=getWarningReply(u'保存并刷新CAE文件?'.encode('GB18030'), (YES,CANCEL))
 
     if flag==YES:
