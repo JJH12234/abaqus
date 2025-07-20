@@ -194,6 +194,8 @@ def pre_stepBuild(bstep, csteplist, steptimepair, astep, cyctimes, modeltype=Non
                 m.FieldOutputRequest(name='F-Output-0',#再创建场输出
                                       createStepName=new_name,
                                       variables=fieldOutputRequestsMap(m,modeltype))
+    if refreshFlag:
+        refreshMdb(mdb.pathName,m.name)
     def _calc_ignore(mdb_model, first_cycle_tag):
         """
         统计 'Initial' 之后、第一次出现 first_cycle_tag 之前
@@ -215,7 +217,8 @@ def pre_stepBuild(bstep, csteplist, steptimepair, astep, cyctimes, modeltype=Non
 
 def refreshMdb(path,modelname):
     #对于abaqusCAE不刷新Bug，建议保存再读取
-    flag=getWarningReply('SAVE and Refresh mdb?', (YES,CANCEL))
+    flag=getWarningReply(u'保存并刷新CAE文件?'.encode('GB18030'), (YES,CANCEL))
+
     if flag==YES:
         mdb.save()
         openMdb(pathName=path)
