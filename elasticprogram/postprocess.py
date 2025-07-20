@@ -14,7 +14,7 @@ import numpy as np
 import csv
 # import brittle_assess
 import datetime
-datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
+
 def safe_del(name, container):
     "若存在同名对象则先删除"
     try:
@@ -170,6 +170,7 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
         for node in Damages[part]:
             Damages[part][node]['judge']='Pass' if is_below_double_breakline(Damages[part][node]['FatigueDamageByCycle'][-1],Damages[part][node]['CreepDamageByCycle'][-1],Step_configs['damageJudge']) else 'NotPass'
     ###输出
+    datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
     with open(r'Damage {}.json'.format(datetimenow), 'w') as f:
         json.dump(Damages, f, indent=4)
     print(u'Damage {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
@@ -269,6 +270,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                 IE[part][node]['isWeld']=False
             IE[part][node]['judge']='Pass' if IE[part][node]['FinalIEmax']<judge else 'NotPass >{}%'.format(str(judge*100))
     ###输出
+    datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
     with open(r'IE_point {}.json'.format(datetimenow), 'w') as f:
         json.dump(IE, f, indent=4)
     print(u'IE_point {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
@@ -359,6 +361,7 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
                 judge=0.01 if not flag else 0.02
             IE[pthname]['judge'+ptype]='Pass' if IE[pthname]['FinalIEmax'+ptype]<judge else 'NotPass >{}%'.format(str(judge*100))
     ###输出
+    datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
     with open(r'IE_path {}.json'.format(datetimenow), 'w') as f:
         json.dump(IE, f, indent=4)
     print(u'IE_path {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
@@ -375,6 +378,7 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
     step_indices = {name: idx for idx, name in enumerate(step_names)}
     ###指定提取内容
     user_variables.append({'name': 'NT11','output_position':'NODAL',})
+    datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
     for item in processd_path:
         pthname,expression,flag=item
         ###循环创建分析步
@@ -758,8 +762,14 @@ def max_principal_strain(e_xx, e_yy, e_zz, gamma_xy, gamma_xz, gamma_yz):
 
 def numpy_linear_regression(points):
     x, y = np.array(points).T
-    slope, intercept = np.polyfit(x, y, 1)
-    return y.mean(), slope*x.min()+intercept, slope*x.max()+intercept
+    # slope, intercept = np.polyfit(x, y, 1)
+    # return y.mean(), slope*x.min()+intercept, slope*x.max()+intercept
+    t=x.max()-x.min()
+    c=(x.max()+x.min())/2
+    sigma_m=np.trapz(x=x,y=y)/t
+    intercept=-6.0*np.trapz(x=x,y=y*(x-c))/t**2
+    return sigma_m,sigma_m+intercept,sigma_m-intercept
+
 
 def write_to_tsv(filename, data, is_first_write=False):
     # 打开文件，根据is_first_write决定模式
