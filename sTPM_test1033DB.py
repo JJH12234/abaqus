@@ -19,7 +19,7 @@ thisDir = os.path.dirname(thisPath)
 
 class STPM_test1033DB(AFXDataDialog):
     [
-        ID_CLICKED_import1,
+        ID_CLICKED_IMPORT1,
         ID_MODEL_MATERIAL_COMBO_CHANGED,
         ID_CLICKED_NEW,
         ID_CLICKED,
@@ -32,12 +32,13 @@ class STPM_test1033DB(AFXDataDialog):
         ID_TEXT_CHANGED,
         ID_CYCLE_LIST_CHANGED,
         ID_TAB_CHANGED,
-        ID_CLICKED_importfuzhi,
-        ID_CLICKED_createstep,
-        ID_CLICKED_modifystep,
-        ID_CLICKED_updateModel,
-        ID_CLICKED_AmpPair
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 19)
+        ID_TAB5_CHANGED,
+        ID_CLICKED_IMPORTFUZHI,
+        ID_CLICKED_CREATESTEP,
+        ID_CLICKED_MODIFYSTEP,
+        ID_CLICKED_UPDATEMODEL,
+        ID_CLICKED_AMPPAIR
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 20)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
 
@@ -150,11 +151,11 @@ class STPM_test1033DB(AFXDataDialog):
                      text=u'更新模型尺寸'.encode('GB18030'),
                      ic=None,
                      tgt=self,
-                     sel=self.ID_CLICKED_updateModel,
+                     sel=self.ID_CLICKED_UPDATEMODEL,
                      opts=BUTTON_NORMAL | JUSTIFY_LEFT)
         updateBtn.setTarget(self)
-        updateBtn.setSelector(self.ID_CLICKED_updateModel)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_updateModel, STPM_test1033DB.onUpdateModelClicked)
+        updateBtn.setSelector(self.ID_CLICKED_UPDATEMODEL)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_UPDATEMODEL, STPM_test1033DB.onUpdateModelClicked)
         # button = FXButton(p=TabItem_22, text=u'更新模型尺寸'.encode('GB18030'), opts=BUTTON_NORMAL | JUSTIFY_LEFT)
         tabItem = FXTabItem(p=TabBook_1, text=u'材料'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
@@ -263,13 +264,13 @@ class STPM_test1033DB(AFXDataDialog):
         spinner2.setRange(0, 9999)
         spinner2.setIncrement(1)
         import1 = FXButton(p=VFrame_16, text=u'导入该材料'.encode('GB18030'), ic=None, tgt=self,
-                                     sel=self.ID_CLICKED_import1,
+                                     sel=self.ID_CLICKED_IMPORT1,
                                      opts=BUTTON_NORMAL |LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         #l = FXLabel(p=VFrame_16, text='Button: Run', opts=JUSTIFY_LEFT)
         # 为import1按钮添加事件处理
         import1.setTarget(self)
-        import1.setSelector(self.ID_CLICKED_import1)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_import1, STPM_test1033DB.onImport1Clicked)
+        import1.setSelector(self.ID_CLICKED_IMPORT1)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_IMPORT1, STPM_test1033DB.onImport1Clicked)
         tabItem = FXTabItem(p=TabBook_1, text=u'幅值表'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_6 = FXVerticalFrame(p=TabBook_1,
@@ -318,8 +319,8 @@ class STPM_test1033DB(AFXDataDialog):
                         opts=BUTTON_NORMAL, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         # l = FXLabel(p=TabItem_6, text='Button: Run', opts=JUSTIFY_LEFT)
         run2.setTarget(self)
-        run2.setSelector(self.ID_CLICKED_importfuzhi)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_importfuzhi, STPM_test1033DB.Clicked_amplitude)
+        run2.setSelector(self.ID_CLICKED_IMPORTFUZHI)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_IMPORTFUZHI, STPM_test1033DB.Clicked_amplitude)
         l.setFont(getAFXFont(FONT_BOLD))
         HFrame_10 = FXHorizontalFrame(p=TabItem_6, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
                                       pl=0, pr=0, pt=0, pb=0)
@@ -441,8 +442,8 @@ class STPM_test1033DB(AFXDataDialog):
                               opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         # l = FXLabel(p=VFrame_17, text='Button: creat step', opts=JUSTIFY_LEFT)
         createstep.setTarget(self)
-        createstep.setSelector(self.ID_CLICKED_createstep)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_createstep, STPM_test1033DB.Createstep)
+        createstep.setSelector(self.ID_CLICKED_CREATESTEP)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_CREATESTEP, STPM_test1033DB.Createstep)
         if isinstance(TabItem_5, FXHorizontalFrame):
             FXVerticalSeparator(p=TabItem_5, x=0, y=0, w=0, h=0, pl=2, pr=2, pt=2, pb=2)
         else:
@@ -469,11 +470,11 @@ class STPM_test1033DB(AFXDataDialog):
         AFXTextField(p=HFrame_35, ncols=12, labelText=u' 值:'.encode('GB18030'), tgt=form.keyword74Kw, sel=0)
         # l = FXLabel(p=GroupBox_23, text='Button: modify step', opts=JUSTIFY_LEFT)
         editstep = FXButton(p=GroupBox_23, text=u'修改分析步'.encode('GB18030'), ic=None, tgt=self,
-                      sel=self.ID_CLICKED_modifystep,
+                      sel=self.ID_CLICKED_MODIFYSTEP,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         editstep.setTarget(self)
-        editstep.setSelector(self.ID_CLICKED_modifystep)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_modifystep,STPM_test1033DB.Modifystep)
+        editstep.setSelector(self.ID_CLICKED_MODIFYSTEP)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_MODIFYSTEP,STPM_test1033DB.Modifystep)
         tabItem = FXTabItem(p=TabBook_1, text=u'载荷/换热'.encode('GB18030'), ic=None, opts=TAB_TOP_NORMAL,
                             x=0, y=0, w=0, h=0, pl=6, pr=6, pt=DEFAULT_PAD, pb=DEFAULT_PAD)
         TabItem_7 = FXVerticalFrame(p=TabBook_1,
@@ -494,11 +495,11 @@ class STPM_test1033DB(AFXDataDialog):
         AFXTextField(p=VAligner_11, ncols=12, labelText=u'循环次数:'.encode('GB18030'), tgt=form.keyword81Kw, sel=0)
         self.importOdbName=AFXTextField(p=TabItem_7, ncols=50, labelText=u'温度场结果:'.encode('GB18030'), tgt=form.temperatureFieldKw, sel=0)
         pairamp = FXButton(p=TabItem_7, text=u'匹配幅值表(当前标签页)'.encode('GB18030'), ic=None, tgt=self,
-                      sel=self.ID_CLICKED_AmpPair,
+                      sel=self.ID_CLICKED_AMPPAIR,
                       opts=BUTTON_NORMAL | LAYOUT_CENTER_Y, x=0, y=0, w=0, h=0, pl=1, pr=1, pt=1, pb=1)
         pairamp.setTarget(self)
-        pairamp.setSelector(self.ID_CLICKED_AmpPair)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_AmpPair, STPM_test1033DB.onCombineCommand)
+        pairamp.setSelector(self.ID_CLICKED_AMPPAIR)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_AMPPAIR, STPM_test1033DB.onCombineCommand)
         self.TabBook_5 = FXTabBook(p=TabItem_7, tgt=None, sel=0,
                               opts=TABBOOK_NORMAL,
                               x=0, y=0, w=0, h=0, pl=DEFAULT_SPACING, pr=DEFAULT_SPACING,
@@ -560,11 +561,13 @@ class STPM_test1033DB(AFXDataDialog):
             self.STRESSList = []
             model_loads = m.loads.keys() 
             if not model_loads:
-                mw.writeToMessageArea(u'Debug: 载荷列表为空'.encode('GB18030'))
+                # mw.writeToMessageArea(u'Debug: 载荷列表为空'.encode('GB18030'))
+                pass
             else:
                 for i in model_loads:
                     self.STRESSList.append(i)
-            mw.writeToMessageArea("Debug: self.STRESSList after try block: " + str(self.STRESSList))
+            # mw.writeToMessageArea("Debug: self.STRESSList after try block: " + str(self.STRESSList))
+            pass
 
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
@@ -765,8 +768,8 @@ class STPM_test1033DB(AFXDataDialog):
 
         # 在TabBook_5创建后添加事件监听
         self.TabBook_5.setTarget(self)
-        self.TabBook_5.setSelector(self.ID_TAB_CHANGED)
-        FXMAPFUNC(self, SEL_COMMAND, self.ID_TAB_CHANGED, STPM_test1033DB.onTabChanged)
+        self.TabBook_5.setSelector(self.ID_TAB5_CHANGED)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_TAB5_CHANGED, STPM_test1033DB.onTabChanged)
 
     # 主界面DB初始化结束，开始定义函数
     def get_current_model(self):
@@ -1618,12 +1621,61 @@ class STPM_test1033DB(AFXDataDialog):
         return self.table1
 
     def onTabChanged(self, sender, sel, ptr):
+        m = self.get_current_model()
+        mw = getAFXApp().getAFXMainWindow()
+        # mw.writeToMessageArea("onTabChanged")
         try:
             # 获取当前选中的标签页索引
             current_tab = sender.getCurrent()
-            
+            if current_tab==0:
+                try:
+                    # currentModelName = getCurrentContext().get('modelName', '')
+                    # x = m.interactions.keys()
+                    # mw = getAFXApp().getAFXMainWindow()
+                    # mw.writeToMessageArea(str(x))
+                    self.HTCList = []
+                    for i in m.interactions.keys():
+                        # mw.writeToMessageArea(str(m.interactions[i].__name__))
+                        if m.interactions[i].__name__ == 'FilmCondition':
+                            self.HTCList.append(i)
+                except Exception as e:
+                    mw.writeToMessageArea("no model")
+                    self.HTCList = ['HTC1', 'HTC2']
+                if self.HTCList:
+                    try:
+                        for i in range(0, len(self.HTCList)):
+                            self.tableH.setItemText(i + 1, 1, str(self.HTCList[i]))
+                            self.tableH.setItemText(i + 1, 2, '%OP%_%NM%_HTC')
+                            self.tableH.setItemText(i + 1, 3, '%OP%_%NM%_TEMP')
+                    except Exception as e:
+                        print("Error filling table:", str(e))
             # 如果是Stress标签页（索引为1）
-            if current_tab == 1:
+            elif current_tab == 1:
+                try:
+                    m = self.get_current_model()
+                    self.STRESSList = []
+                    model_loads = m.loads.keys() 
+                    if not model_loads:
+                        # mw.writeToMessageArea(u'Debug: 载荷列表为空'.encode('GB18030'))
+                        pass
+                    else:
+                        for i in model_loads:
+                            self.STRESSList.append(i)
+                    # mw.writeToMessageArea("Debug: self.STRESSList after try block: " + str(self.STRESSList))
+                    pass
+                except Exception as e:
+                    mw.writeToMessageArea(str(e))
+                if self.STRESSList:
+                    try:
+                        for i in range(len(self.STRESSList)):
+                            if i >= self.tableL.getNumRows() - 1: # 如果需要更多行
+                                self.tableL.insertRows(self.tableL.getNumRows(), 1) # 在末尾插入新行
+                            self.tableL.setItemText(i + 1, 1, str(self.STRESSList[i]))
+                            self.tableL.setItemText(i + 1, 2, '%OP%_%NM%')
+                    except Exception as e:
+                        print("Error filling table:", str(e))
+                # 以上为载荷
+                # 以下为预定义场
                 # 获取文本框内容
                 text = self.form.keyword80Kw.getValue()
                 if text:
@@ -1655,7 +1707,6 @@ class STPM_test1033DB(AFXDataDialog):
                     # 更新表格显示
                     table.update()
         except Exception as e:
-            mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea("Error in onTabChanged: " + str(e))
     def onCombineCommand(self, sender, sel, ptr):
         def getTableData(table):
