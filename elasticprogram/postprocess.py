@@ -355,10 +355,14 @@ def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_con
             for p in processd_path:
                 if pthname==p[0]:
                     flag=processd_path[-1]
-            if ptype=='_ave':
-                judge=0.005 if not flag else 0.01
+            if flag:
+                IE[pthname]['isWeld']=True
             else:
-                judge=0.01 if not flag else 0.02
+                IE[pthname]['isWeld']=False
+            if ptype=='_ave':
+                judge=0.005 if flag else 0.01
+            else:
+                judge=0.01 if flag else 0.02
             IE[pthname]['judge'+ptype]='Pass' if IE[pthname]['FinalIEmax'+ptype]<judge else 'NotPass >{}%'.format(str(judge*100))
     ###输出
     datetimenow=str(datetime.datetime.now()).split('.')[0].replace(':',"'")
