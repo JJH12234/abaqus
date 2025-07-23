@@ -800,7 +800,7 @@ def ActiveStepsFrames(SSb='all',SFb='all',bstep=0,cstep=1,astep=0,f_str='0:-1',n
     fcell=ast.literal_eval("('{}',)".format(fstr))
     #步选择
     SelectCell=[]
-    steps = odbData.steps.keys()[bstep:-astep if astep!=0 else -1]
+    steps = odbData.steps.keys()[bstep:-astep if astep!=0 else None]
     if SSb == 'all':
         SelectCell = [(step, fcell) for step in steps]
     elif SSb == 'mod':
@@ -828,7 +828,8 @@ def ActiveStepsFrames(SSb='all',SFb='all',bstep=0,cstep=1,astep=0,f_str='0:-1',n
         try:
             # SelectCell.append((odbData.activeFrames[-1][0], fcell))
             SelectCell.append((odbData.steps.keys()[-1], fcell))
-        except:
+        except Exception as e:
+            print(e)
             SelectCell.append((odbData.activeFrames[-1][0], fcell))
     odbData.setValues(activeFrames=tuple(SelectCell))
 
