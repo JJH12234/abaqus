@@ -394,14 +394,14 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
         # 遍历每个激活的分析步及其增量步
         # 预先计算每个分析步的累积时间
         steps = list(odb.steps.values())
-        cumulative_times = [0.0]
-        for step in steps:
-            cumulative_times.append(cumulative_times[-1] + step.totalTime)
+        # cumulative_times = [0.0]
+        # for step in steps:
+        #     cumulative_times.append(cumulative_times[-1] + step.totalTime)
         
         for step_info in odbData.activeFrames:
             step_name, frame_exprs = step_info
             step_idx = step_indices[step_name]  # 当前分析步索引
-            prev_total_time = cumulative_times[step_idx]  # 获取之前所有步的总时间
+            # prev_total_time = cumulative_times[step_idx]  # 获取之前所有步的总时间
             
             # 解析所有增量步表达式，合并为一个列表
             all_frame_indices = []
@@ -416,7 +416,7 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
                 # 当前frame在本分析步内的时间
                 frame_time = odb.steps.values()[step_idx].frames[frame_idx].frameValue
                 # 总时间 = 之前所有步总时间 + 当前frame时间
-                total_time = prev_total_time + frame_time
+                total_time = odb.steps.values()[step_idx].totalTime + frame_time
                 # 处理step_idx和frame_idx的组合
                 XYname="{}__step{}__frame{}".format(pthname,step_idx,frame_idx)
                 safe_del(XYname, session.xyDataObjects)
