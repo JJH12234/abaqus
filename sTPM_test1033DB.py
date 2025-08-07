@@ -2003,7 +2003,7 @@ class MaterialDataDialog(AFXDialog):
     def __init__(self, owner, title, item):
         AFXDialog.__init__(self, owner, title, 
                           self.OK|self.CANCEL, 
-                          opts=DIALOG_NORMAL, w=400, h=300)
+                          opts=DIALOG_NORMAL, w=400, h=400)
         data = self.get_item_data(owner, item)
         self.temp_data = data  # 存储原始数据的副本
         self.modified_data = None  # 存储修改后的数据
@@ -2056,6 +2056,10 @@ class MaterialDataDialog(AFXDialog):
                 # 填充数据（列索引固定为1）
                 for row_idx, value in enumerate(data):
                     self.table.setItemText(row_idx , 0, str(value))
+            if col_idx:
+                self.resize(w=min((col_idx+1)*100,800),h=min((row_idx+1)*100,500))
+            else:
+                self.resize(w=400,h=max(400,min((row_idx+1)*100,500)))
         except Exception as e:
             mw = getAFXApp().getAFXMainWindow()
             mw.writeToMessageArea(str(e))

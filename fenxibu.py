@@ -392,7 +392,7 @@ def stepModifyMap(stepname,edittype,value):
     elif edittype=='enable Restart':
         method=getattr(s,'Restart')
         paras={
-            'frequency':999999, 
+            'frequency':value, 
             'numberIntervals':0,
             'overlay':OFF,
             'timeMarks':OFF,
