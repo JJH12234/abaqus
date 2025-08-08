@@ -7,6 +7,7 @@ Created on Tue Mar  4 11:36:31 2025
 import xlrd
 from abaqus import *
 from abaqusConstants import *
+import time
 def get_current_model():
     """获取当前视口关联的模型"""
     flag=None
@@ -14,7 +15,7 @@ def get_current_model():
     modelname=session.sessionState[viewport]['modelName']
     if 'Model-0' in modelname:
         flag=getWarningReply(
-            'WARRNING: Edit Model-0 is not recommanded for user!\n YES-continue; No-copyNew;', (YES,NO,CANCEL))
+            u'警告： 不推荐用户自行编辑Model-0！\n YES以强制编辑; No建立副本并编辑;'.encode('GB18030'), (YES,NO,CANCEL))
     if flag==NO:
         newname=modelname.replace('Model-0','NewModel')
         if newname in mdb.models.keys():
@@ -110,10 +111,17 @@ def paraModeling_regen(m):
 
 def mesh_regen(m):
     #记得修改网格类型：传热/力学
+    viewport = session.currentViewportName
     for part in m.parts.keys():
         m.parts[part].generateMesh()
+        session.viewports[viewport].setValues(displayedObject=m.parts[part])
+        session.viewports[viewport].partDisplay.meshOptions.setValues(
+            meshTechnique=ON)
+        session.viewports[viewport].partDisplay.geometryOptions.setValues(
+            referenceRepresentation=OFF)
+        session.viewports[viewport].partDisplay.setValues(mesh=ON)
+        # time.sleep(0.1)
     pass#后续需要网格检测
-
 def ass_regen(m):
     m.rootAssembly.regenerate()
     
