@@ -20,7 +20,7 @@ def safe_del(name, container):
     try:
         del container[name]
     except KeyError:
-        pass                  # 本来就没有
+        pass                  
 def kernal_analsys(analysetype,
            CreepDamageField,FatigueDamageField,CFICriterion,CreepDamageFieldnum,FatigueDamageFieldnum,
            pathStyle,numIntervals,shape,
@@ -528,66 +528,105 @@ def process_path_data(pathdata):
         (path, tuple(grouped_data[path]['entries']), grouped_data[path]['has_true'])
         for path in path_order)
 
+# 定义一个函数，用于处理点数据。
+# `pointdata` 预期是一个列表，其中每个元素是一个元组，包含 (部件名, 节点字符串, 标记)。
+# `kw1` 和 `kw2` 是可选的关键字参数，用于处理额外的节点数据，默认为空元组。
 def process_points_data(pointdata,kw1=(),kw2=()):
+    # 初始化一个列表，用于存储所有处理后的节点标签。
+    # 格式为 (部件实例名称, (节点表达式字符串,))。
     node_labels = []
+    # 初始化一个 `defaultdict`，其默认值是 `set`。
+    # 用于存储被标记的点的集合，键是部件名，值是该部件下所有被标记的点的唯一集合。
     flagged_points_dict = defaultdict(set)  # 使用集合自动去重
+    # 遍历输入的 `pointdata` 列表中的每个条目。
     for item in pointdata:
+        # 解包当前条目，获取部件名称、节点字符串和标记（布尔值）。
         part_name, nodes_str, flag = item
-        # 分割节点表达式并清理空格
+        # 分割节点表达式字符串（ 包含逗号分隔的多个表达式），并清理每个表达式两端的空格。
+        # `if expr.strip()` 确保只处理非空表达式。
         node_exprs = [expr.strip() for expr in nodes_str.split(',') if expr.strip()]
-        # 构建节点参数结构
+        # 遍历每个节点表达式，构建节点参数结构。
         for expr in node_exprs:
+            # 将 (部件名称, (节点表达式,)) 添加到 `node_labels` 列表中。
             node_labels.append((part_name, (expr,)))
-        # 处理标记点（仅当flag为True时）
+        # 处理标记点：仅当 `flag` 为 True 时才执行此块。
         if flag:
+            # 遍历当前条目中的每个节点表达式。
             for expr in node_exprs:
+                # 使用 `parse_range` 函数解析节点表达式，将其转换为具体的整数点列表。
                 points = parse_range(expr)
+                # 如果 `parse_range` 返回了有效的点列表（非空）。
                 if points:
+                    # 将这些点添加到 `flagged_points_dict` 中对应部件的集合里。
+                    # `update` 方法用于添加多个元素到集合中，并自动去重。
                     flagged_points_dict[part_name].update(points)
     # 处理kw参数的新函数
     def process_kw_nodes(kw_nodes, is_flagged=False):
+        # 遍历 `kw_nodes` 中的每一个节点对象。
         for node in kw_nodes:
+            # 获取节点的实例名称作为部件名。
             part_name = node.instanceName
+            # 检查该部件实例是否存在于当前 ODB 的根装配中。
             if part_name in get_current_odb().rootAssembly.instances:
+                # 获取节点的标签（通常是节点 ID 或范围），并清理空格。
                 expr = str(node.label).strip()
-                # 添加节点参数
+                # 将 (部件名称, (节点标签,)) 添加到 `node_labels` 列表中。
                 node_labels.append((part_name, (expr,)))
-                # 处理标记点
+                # 如果 `is_flagged` 为 True，则处理标记点。
                 if is_flagged:
+                    # 解析节点标签，获取具体的点列表。
                     points = parse_range(expr)
+                    # 如果解析成功并返回了点。
                     if points:
+                        # 将这些点添加到 `flagged_points_dict` 中对应部件的集合里。
                         flagged_points_dict[part_name].update(points)
-    # 处理kw1（标记节点）
+    # 调用内部函数 `process_kw_nodes` 处理 `kw1` 参数。
+    # `kw1` 中的节点被视为标记节点，因此 `is_flagged` 设置为 True。
     process_kw_nodes(kw1, is_flagged=True)
-    # 处理kw2（普通节点）
+    # 调用内部函数 `process_kw_nodes` 处理 `kw2` 参数。
+    # `kw2` 中的节点被视为普通节点，因此 `is_flagged` 默认为 False。
     process_kw_nodes(kw2)
-    # 格式转换
+    # 格式转换：将 `flagged_points_dict` 中的集合转换为排序后的列表。
+    # 这样可以确保输出的标记点是唯一且有序的。
     sorted_flagged = {
-        part: sorted(points_set)
+        part: sorted(list(points_set)) # 将集合转换为列表并排序
         for part, points_set in flagged_points_dict.items()
     }
     
+    # 返回处理后的节点标签元组和排序后的标记点字典。
     return tuple(node_labels), sorted_flagged
 
+# 定义一个函数，用于解析范围表达式字符串，例如 "1:5:2" (从1到5，步长为2)。
+# `expr` 是一个字符串，表示一个或多个整数或一个范围。
 def parse_range(expr):
     """解析范围表达式为具体数值列表"""
+    # 使用冒号分割表达式字符串。
     parts = expr.split(':')
     try:
+        # 如果分割后只有一个部分，表示这是一个单个的数值。
         if len(parts) == 1:  # 单个数值
+            # 将其转换为整数并放入列表中返回。
             return [int(parts[0])]
-        # 解析范围参数
-        start = int(parts[0])
-        end = int(parts[1])
+        # 如果有多个部分，则解析为范围参数。
+        start = int(parts[0]) # 范围的起始值。
+        end = int(parts[1])   # 范围的结束值。
+        # 步长，如果 `parts` 有三个部分，则取第三部分，否则默认为 1。
         step = int(parts[2]) if len(parts) == 3 else 1
-        # 调整边界确保包含终点
+        # 调整结束边界，以确保 `range` 函数包含 `end` 值。
         if step > 0:
+            # 如果步长为正，`range` 函数的结束值需要加 1 才能包含 `end`。
             adjusted_end = end + 1
         elif step < 0:
+            # 如果步长为负，`range` 函数的结束值需要减 1 才能包含 `end`。
             adjusted_end = end - 1
         else:  # 无效步长
+            # 如果步长为 0，则认为表达式无效，返回空列表。
             return []
+        # 使用 `range` 函数生成数值序列，并将其转换为列表返回。
         return list(range(start, adjusted_end, step))
+    # 捕获 `ValueError` (例如，字符串无法转换为整数) 或 `IndexError` (例如，缺少范围参数) 异常。
     except (ValueError, IndexError):
+        # 如果发生任何解析错误，则返回空列表，表示表达式无效。
         return []  # 跳过无效格式
 
 def creatPath(pthname,expression):
@@ -726,52 +765,76 @@ def getxyData_point(args):
         xyDataObjectsList = [xyDataObjectsList]
     return xyDataObjectsList
 
+# 定义一个函数，用于从 ODB 路径中获取 XY 数据对象列表。
+# `args` 是由 `generate_xypath_data_args()` 函数返回的参数字典。
 def getxyData_path(args):
     '''
     args为 generate_xypath_data_args()返回的字典
     '''
+    # 初始化一个空列表，用于存储提取到的 XYData 对象。
     xyDataObjectsList=[]
     try:
+        # 调用 `session.XYDataFromPath` 方法，使用解包的 `args` 字典作为参数。
+        # 这个方法从 ODB 路径中提取数据并创建 XYData 对象。
         xyDataObjectsList=session.XYDataFromPath(**args)
     except OdpError:
+        # 捕获 `OdpError` (ODB 访问错误)，通常表示指定的字段或路径不存在。
+        # 打印错误信息，指出哪个变量字段未找到。
         print("filed {} not found".format(str(args['variable'])))
+    # 检查 `xyDataObjectsList` 的类型。`session.XYDataFromPath`  返回列表或单个对象。
     if isinstance(xyDataObjectsList, list):
+        # 如果返回值已经是列表，则不需要额外处理。
         # 如果返回值是列表，使用 extend() 方法添加到既有列表中
-        # xyDataObjectsList.extend(xyDataObjectsList)
+        # xyDataObjectsList.extend(xyDataObjectsList) # 这行是多余的，因为 xyDataObjectsList 已经是结果
         pass
     else:
+        # 如果返回值是单个对象（而不是列表），则将其包装在一个列表中。
         # 如果返回值是单个对象，使用 append() 方法添加到既有列表中
-        # xyDataObjectsList.append(xyDataObjectsList)
-        xyDataObjectsList = [xyDataObjectsList]
+        # xyDataObjectsList.append(xyDataObjectsList) # 这行是错误的，会导致无限递归
+        xyDataObjectsList = [xyDataObjectsList] # 正确的做法是将其包装成一个列表
+    # 返回包含 XYData 对象的列表。
     return xyDataObjectsList
 
+# 接受六个应变分量作为输入：e_xx, e_yy, e_zz (正应变), gamma_xy, gamma_xz, gamma_yz (工程剪应变)。
 def max_principal_strain(e_xx, e_yy, e_zz, gamma_xy, gamma_xz, gamma_yz):
-    # 将工程剪应变转换为张量分量
+    # 将工程剪应变转换为张量分量（剪应变张量分量是工程剪应变的一半）。
     e_xy = gamma_xy / 2.0
     e_xz = gamma_xz / 2.0
     e_yz = gamma_yz / 2.0
     
-    # 构造应变张量矩阵
+    # 构造应变张量矩阵（一个 3x3 的对称矩阵）。
     strain_tensor = np.array([
         [e_xx,  e_xy,  e_xz],
         [e_xy,  e_yy,  e_yz],
         [e_xz,  e_yz,  e_zz]
     ])
     
-    # 计算特征值（按升序排列）
+    # 计算应变张量的特征值。
+    # `np.linalg.eigvalsh` 用于计算 Hermitian (或实对称) 矩阵的特征值，并按升序排列。
     eigenvalues = np.linalg.eigvalsh(strain_tensor)
     
-    # 返回最大主应变（最后一个元素）
+    # 返回最大主应变，即排序后的特征值列表的最后一个元素。
     return eigenvalues[-1]
 
+# 定义一个函数，用于执行基于 NumPy 的线性回归（或类似计算）。
+# `points` 预期是一个包含 (x, y) 对的列表或 NumPy 数组。
 def numpy_linear_regression(points):
+    # 将输入点数据解包为 x 和 y 坐标的 NumPy 数组。
+    # `.T` 用于转置数组，使得 `x` 包含所有 x 坐标，`y` 包含所有 y 坐标。
     x, y = np.array(points).T
+    # 以下是被注释掉的传统线性回归代码，使用 `np.polyfit` 来计算斜率和截距。
     # slope, intercept = np.polyfit(x, y, 1)
     # return y.mean(), slope*x.min()+intercept, slope*x.max()+intercept
+    # 计算 x 坐标范围的长度。
     t=x.max()-x.min()
+    # 计算 x 坐标范围的中心点。
     c=(x.max()+x.min())/2
+    # 计算平均应力（或类似量），使用梯形法则进行数值积分。
+    # `np.trapz` 计算沿给定轴的积分。
     sigma_m=np.trapz(x=x,y=y)/t
+    # 计算弯曲应力（或类似量），这里是基于矩的计算，常用于梁理论。
     sigma_b=-6.0*np.trapz(x=x,y=y*(x-c))/t**2
+    # 返回平均应力、最大应力（平均应力 + 弯曲应力）和最小应力（平均应力 - 弯曲应力）。
     return sigma_m,sigma_m+sigma_b,sigma_m-sigma_b
 
 
@@ -793,48 +856,70 @@ def write_to_tsv(filename, data, is_first_write=False):
     file.close()
 
 def ActiveStepsFrames(SSb='all',SFb='all',bstep=0,cstep=1,astep=0,f_str='0:-1',name=''):
+    # 获取当前 ODB 数据对象，该对象包含关于 ODB 步和帧的信息。
     odbData=get_current_odbdata()
-    #帧选择
+    # 帧选择逻辑。
     if SFb=='all':
+        # 如果选择所有帧，则帧字符串为 '0:-1' (从第一个到最后一个)。
         fstr='0:-1'
     elif SFb=='range':
+        # 如果选择指定范围的帧，则使用传入的 `f_str`。
         fstr = f_str
     elif SFb=='last':
+        # 如果选择最后一帧，则帧字符串为 '-1:-1'。
         fstr='-1:-1'
+    # 使用 `ast.literal_eval` 安全地将帧字符串转换为元组，例如 "('0:-1',)"。
+    # 这样可以避免直接使用 `eval`  带来的安全风险。
     fcell=ast.literal_eval("('{}',)".format(fstr))
-    #步选择
-    SelectCell=[]
+    # 步选择逻辑。
+    SelectCell=[] # 初始化一个空列表，用于存储最终选定的步和帧元组。
+    # 获取 ODB 中所有步的名称，并根据 `bstep` 和 `astep` 进行切片。
+    # `odbData.steps.keys()` 返回一个包含所有步名称的列表。
     steps = odbData.steps.keys()[bstep:-astep if astep!=0 else None]
     if SSb == 'all':
+        # 如果选择所有步，则为每个步创建一个 (步名, 帧元组) 条目。
         SelectCell = [(step, fcell) for step in steps]
     elif SSb == 'mod':
+        # 如果选择模数步（按 `cstep` 间隔选择）。
         SelectCell = [
             (step, fcell) 
-            for i, step in enumerate(steps, 1)  # python2.7 start参数写法
-            if i % cstep == 0
+            for i, step in enumerate(steps, 1)  # `enumerate` 从 1 开始计数，用于模数判断。
+            if i % cstep == 0 # 如果步的索引是 `cstep` 的倍数，则选择该步。
         ]
     elif SSb == 'Name' and name!='':
-        # print(name)
+        # 如果按名称选择特定步。
+        # print(name) # 调试语句，打印要查找的步名称。
         if name in odbData.steps.keys():
+            # 如果指定的名称存在于步列表中，则只选择该步。
             SelectCell=[(name, fcell),]
         else:
+            # 如果指定的名称不存在，则抛出 `ValueError`。
+            # `.encode('GB18030')` 用于处理中文错误信息在某些环境下的显示问题。
             raise ValueError(u"没有名为{}的分析步，无法增补".format(name).encode('GB18030'))
-        # SelectCell = [(step, fcell) for step in steps if name in step]
-        # print(SelectCell)
+        # SelectCell = [(step, fcell) for step in steps if name in step] # 原始注释掉的代码， 是用于模糊匹配。
+        # print(SelectCell) # 调试语句，打印选定的步。
     elif SSb=='last':
+        # 如果选择最后一个步。
+        # `odbData.activeFrames[-1][0]`  是获取当前激活的最后一个步的名称。
         SelectCell = [(odbData.activeFrames[-1][0], fcell)]
     elif SSb == 'mod and last':
+        # 如果选择模数步，并额外包含最后一个步。
         SelectCell = [
             (step, fcell) 
-            for i, step in enumerate(steps, 1)  # python2.7 start参数写法
-            if i % cstep == 0
+            for i, step in enumerate(steps, 1)  # `enumerate` 从 1 开始计数。
+            if i % cstep == 0 # 如果步的索引是 `cstep` 的倍数，则选择该步。
         ]
         try:
-            # SelectCell.append((odbData.activeFrames[-1][0], fcell))
+            # 尝试添加 ODB 中最后一个步的名称。
+            # SelectCell.append((odbData.activeFrames[-1][0], fcell)) # 原始注释掉的代码。
             SelectCell.append((odbData.steps.keys()[-1], fcell))
         except Exception as e:
+            # 捕获异常并打印。
             print(e)
+            # 如果获取最后一个步失败，则回退到使用 `odbData.activeFrames` 的最后一个步。
             SelectCell.append((odbData.activeFrames[-1][0], fcell))
+    # 将构建好的 `SelectCell` 元组设置为 ODB 数据的激活帧。
+    # 这会更新 Abaqus GUI 中显示的激活步和帧。
     odbData.setValues(activeFrames=tuple(SelectCell))
 
 
