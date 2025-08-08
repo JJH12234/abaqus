@@ -27,7 +27,7 @@ def get_current_model():
         # 如果是'Model-0'，则弹出一个警告对话框，提示用户不建议直接编辑此模型。
         # 用户可以选择继续、复制新模型或取消。
         flag=getWarningReply(
-            'WARRNING: Edit Model-0 is not recommanded for user!\n YES-continue; No-copyNew;', (YES,NO,CANCEL))
+            u'警告： 不推荐用户自行编辑Model-0！\n YES以强制编辑; No建立副本并编辑;'.encode('GB18030'), (YES,NO,CANCEL))
     # 如果用户选择“No”（不继续编辑，复制新模型）。
     if flag==NO:
         # 为新模型生成一个建议的名称，将'Model-0'替换为'NewModel'。

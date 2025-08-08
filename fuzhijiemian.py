@@ -11,7 +11,7 @@ def get_current_model():
     flag=None
     viewport = session.currentViewportName
     modelname=session.sessionState[viewport]['modelName']
-    if 'Model-0' in modelname:
+    if 'Model-0' in modelname and WARRNINGflag!=YES:
         flag=getWarningReply(
             u'警告： 不推荐用户自行编辑Model-0！\n YES以强制编辑; No建立副本并编辑;'.encode('GB18030'), (YES,NO,CANCEL))
         WARRNINGflag=flag
