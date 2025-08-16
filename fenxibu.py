@@ -439,6 +439,7 @@ def pre_stepBuild(bstep, csteplist, steptimepair, astep, cyctimes, modeltype=Non
                 m.FieldOutputRequest(name='F-Output-0',
                                       createStepName=new_name,
                                       variables=fieldOutputRequestsMap(m,modeltype))
+
     # 定义一个内部辅助函数，用于计算需要忽略的分析步数量。
     def _calc_ignore(mdb_model, first_cycle_tag):
         """

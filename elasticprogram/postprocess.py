@@ -160,11 +160,11 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
                 else:
                     if field==CreDamUV:
                         delta=max(0,(xy.data[-1][1]-xy.data[0][1]))
-                        Damages[part][node]['AddCreepDamage_'+stepname]=delta
+                        Damages[part][node]['AddCreepDamage_'+stepname]=max(0,delta)
                         Damages[part][node]['CreepDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
                     elif field==FatDamUV:
                         delta=max(0,(xy.data[-1][1]-xy.data[0][1]))
-                        Damages[part][node]['AddFatigueDamage_'+stepname]=delta
+                        Damages[part][node]['AddFatigueDamage_'+stepname]=max(0,delta)
                         Damages[part][node]['FatigueDamageByCycle'][-1]+=delta*Step_configs['extrapolateTimes']
     for part in Damages:
         for node in Damages[part]:
@@ -417,6 +417,7 @@ def kernel_BrittleFailure(tabledata,user_variables,path_extras_configs={}):
                 frame_time = odb.steps.values()[step_idx].frames[frame_idx].frameValue
                 # 总时间 = 之前所有步总时间 + 当前frame时间
                 total_time = odb.steps.values()[step_idx].totalTime + frame_time
+                # total_time = prev_total_time + frame_time
                 # 处理step_idx和frame_idx的组合
                 XYname="{}__step{}__frame{}".format(pthname,step_idx,frame_idx)
                 safe_del(XYname, session.xyDataObjects)

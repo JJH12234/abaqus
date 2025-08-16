@@ -118,6 +118,8 @@ class SoftwareprogramDB(AFXDataDialog):
         self.ComboBox_7.appendItem(text='UVARM')
         self.ComboBox_7.appendItem(text='SDV')
         self.Textfield_CF = AFXTextField(p=VAligner_1, ncols=9, labelText=u'蠕变疲劳交互判据'.encode('GB18030'), tgt=form.CFICriterionKw, sel=0)
+        self.Textfield_CFweldC = AFXTextField(p=VAligner_1, ncols=9, labelText=u'焊缝蠕变削弱系数'.encode('GB18030'), tgt=form.CREEP_WELD_FATORKw, sel=0)
+        self.Textfield_CFweldF = AFXTextField(p=VAligner_1, ncols=9, labelText=u'焊缝疲劳削弱系数'.encode('GB18030'), tgt=form.FATIGUE_WELD_FATORKw, sel=0)
         form.CFICriterionKw.setTarget(self)
         form.CFICriterionKw.setSelector(self.ID_CFICriterion_CHANGED)
         self.VAligner_3 = AFXVerticalAligner(p=HFrame_9, opts=0, x=0, y=0, w=0, h=0,
@@ -614,7 +616,7 @@ class SoftwareprogramDB(AFXDataDialog):
         main_window.writeToMessageArea(u"当前文本是 :{}\n".format(current_text.decode('GB18030')).encode('GB18030'))
         all_widgets = [
             self.ComboBox_2, self.ComboBox_8, self.GroupBox_9, self.ComboBox_6,
-            self.ComboBox_7, self.Textfield_CF, self.VAligner_3, self.spinner_creep,
+            self.ComboBox_7, self.Textfield_CF,self.Textfield_CFweldC,self.Textfield_CFweldF, self.VAligner_3, self.spinner_creep,
             self.spinner_fatigue, self.GroupBox_7, self.ComboBox_4, self.spinner_intervals,
             self.HFrame_7, self.undeformed_button, self.deformed_button, self.GroupBox_2,
             self.table_paths, self.spinner_precondition, self.spinner_cycle, self.spinner_superfluous,
@@ -630,6 +632,8 @@ class SoftwareprogramDB(AFXDataDialog):
             self.ComboBox_6.disable()
             self.ComboBox_7.disable()
             self.Textfield_CF.disable()
+            self.Textfield_CFweldC.disable()
+            self.Textfield_CFweldF.disable()
             self.VAligner_3.disable()
             self.spinner_creep.disable()
             self.spinner_fatigue.disable()
@@ -652,6 +656,8 @@ class SoftwareprogramDB(AFXDataDialog):
             self.ComboBox_6.disable()
             self.ComboBox_7.disable()
             self.Textfield_CF.disable()
+            self.Textfield_CFweldC.disable()
+            self.Textfield_CFweldF.disable()
             self.VAligner_3.disable()
             self.spinner_creep.disable()
             self.spinner_fatigue.disable()
@@ -760,16 +766,20 @@ class SoftwareprogramDB(AFXDataDialog):
     )
         self.spinner_extrao.enable()
         self.Textfield_step.enable()
-        if current_text == 'Direct':
-            self.spinner_extrao.enable()
-            self.Textfield_step.disable()
-        elif current_text == 'Add':
-            self.spinner_extrao.enable()
-            self.Textfield_step.enable()
-        elif current_text == 'None' or self.ComboBox_2.getItemText(self.ComboBox_2.getCurrentItem())==u'防脆断分析'.encode('GB18030'):
-            main_window.writeToMessageArea(
-            u"选择 None → 关闭所有外推控件\n".encode('GB18030')
-        )
+        if self.ComboBox_2.getCurrentItem() != u'防脆断分析'.encode('GB18030'):
+            if current_text == 'Direct':
+                self.spinner_extrao.enable()
+                self.Textfield_step.disable()
+            elif current_text == 'Add':
+                self.spinner_extrao.enable()
+                self.Textfield_step.enable()
+            elif current_text == 'None' or self.ComboBox_2.getItemText(self.ComboBox_2.getCurrentItem())==u'防脆断分析'.encode('GB18030'):
+                main_window.writeToMessageArea(
+                u"选择 None → 关闭所有外推控件\n".encode('GB18030')
+            )
+                self.spinner_extrao.disable()
+                self.Textfield_step.disable()
+        else:
             self.spinner_extrao.disable()
             self.Textfield_step.disable()
         # self.getOwner().recalc()
