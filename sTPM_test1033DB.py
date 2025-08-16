@@ -77,9 +77,10 @@ class STPM_test1033DB(AFXDataDialog):
         # 定义一个ID常量， 用于“修改步”操作的点击事件。
         ID_CLICKED_UPDATEMODEL,
         # 定义一个ID常量， 用于“更新模型”操作的点击事件。
-        ID_CLICKED_AMPPAIR
+        ID_CLICKED_AMPPAIR,
         # 定义一个ID常量， 用于“AMPPAIR”操作的点击事件。
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 20)
+        ID_PARAMNAME_DBLCLICK
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 21)
     # 这些ID常量被赋值为从 AFXForm.ID_LAST+1 开始的连续整数，用于唯一标识GUI事件。
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
@@ -268,6 +269,17 @@ class STPM_test1033DB(AFXDataDialog):
         self.table.showHorizontalGrid(True)
         # 显示表格的水平网格线。
         self.table.showVerticalGrid(True)
+        self.table.setTarget(self)
+        self.table.setColumnEditable(1, False)   # 参数名 只读
+        self.table.setColumnEditable(2, True)    # 参数值 可编辑
+        self.table.setColumnEditable(3, False)   # 类型 只读
+        self.table.setColumnEditable(4, False)   # 部件 只读
+        self.table.setColumnEditable(5, False)   # 特征 只读
+        self.table.shadeReadOnlyItems(True)      # 只读单元格加阴影（可选）. :contentReference[oaicite:6]{index=6}
+        self.table.setTarget(self)
+        self.table.setSelector(self.ID_PARAMNAME_DBLCLICK)
+        FXMAPFUNC(self, SEL_DOUBLECLICKED, self.ID_PARAMNAME_DBLCLICK,
+          STPM_test1033DB.onParamNameDblClicked)
         # 显示表格的垂直网格线。
 
         # if self.excel_data:
@@ -1967,7 +1979,78 @@ class STPM_test1033DB(AFXDataDialog):
         
         # 返回最终的JSON数据
         return jsondata
+    def onParamNameDblClicked(self, sender, sel, ptr):
+        """双击‘参数名’列：进入草图并聚焦到该参数的尺寸（安全精简版）"""
+        try:
+            tbl = self.getTable()
+            row = tbl.getCurrentRow()
+            col = tbl.getCurrentColumn()
+            if row <= 0 or col != 1:
+                return
 
+            param_name   = tbl.getItemText(row, 1).strip()
+            part_name    = tbl.getItemText(row, 4).strip()
+            feature_name = tbl.getItemText(row, 5).strip()
+            if not part_name or not feature_name:
+                getAFXApp().getAFXMainWindow().writeToMessageArea(
+                    u"跳转失败：缺少部件/特征".encode('GB18030'))
+                return
+
+            # 逐行拼脚本，避免 % 格式化冲突 & 顶格无缩进
+            cmd = "\n".join([
+                "from abaqus import mdb, session",
+                "from abaqusConstants import *",
+                "import re",
+                "vp = session.currentViewportName",
+                "partName = {!r}".format(part_name),
+                "featName = {!r}".format(feature_name),
+                "pModel = None",
+                "for _mn,_m in mdb.models.items():",
+                "    if partName in _m.parts: pModel=_mn; break",
+                "if pModel is None: raise RuntimeError('Part not found: %s' % partName)",
+                "m = mdb.models[pModel]",
+                "p = m.parts[partName]",
+                "keys = [k for k in p.features.keys() if k.upper()==featName.upper()]",
+                "if not keys: raise RuntimeError('Feature not found: %s' % featName)",
+                "fk = keys[0]",
+                "if '__edit__' in m.sketches:",
+                "    try: m.sketches['__edit__'].unsetPrimaryObject()",
+                "    except: pass",
+                "    del m.sketches['__edit__']",
+                "s0 = p.features[fk].sketch",
+                "m.ConstrainedSketch(name='__edit__', objectToCopy=s0)",
+                "s = m.sketches['__edit__']",
+                "s.setPrimaryObject(option=SUPERIMPOSE)",
+                "p.projectReferencesOntoSketch(sketch=s, upToFeature=p.features[fk], filter=COPLANAR_EDGES)",
+                "session.viewports[vp].setValues(displayedObject=s)",
+                "",
+                "# 用参数反查尺寸索引（最稳妥的做法）",
+                "paramName = {!r}".format(param_name),
+                "try:",
+                "    prm = s.parameters[paramName]",
+                "    mobj = re.search(r'dimensions\\[(\\d+)\\]', prm.path)",
+                "    if not mobj: raise KeyError",
+                "    didx = int(mobj.group(1))",
+                "    d = s.dimensions[didx]",
+                "    # 若有文本点就用其做视图中心；否则全图",
+                "    try:",
+                "        x,y = map(float, d.textPoint)",
+                "        v = session.viewports[vp].view",
+                "        # 只缩放宽高到当前的 0.35，避免改 cameraPosition（更稳）",
+                "        v.setValues(cameraTarget=(x, y, 0.0))",
+                "        v.setValues(width=max(v.width*0.35, 10.0), height=max(v.height*0.35, 10.0))",
+                "    except:",
+                "        session.viewports[vp].view.fitView()",
+                "except Exception as _e:",
+                "    # 找不到尺寸也别崩，直接自适应视图",
+                "    session.viewports[vp].view.fitView()",
+            ])
+
+            sendCommand(cmd)
+
+        except Exception as e:
+            getAFXApp().getAFXMainWindow().writeToMessageArea(
+                u"跳转失败: {}".format(unicode(str(e), 'utf-8', 'replace')).encode('GB18030'))
     # 定义处理“更新模型”按钮点击事件的方法
     def onUpdateModelClicked(self, sender, sel, ptr):
         # 获取Abaqus主窗口实例
