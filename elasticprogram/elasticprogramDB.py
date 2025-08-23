@@ -499,14 +499,32 @@ class SoftwareprogramDB(AFXDataDialog):
 
 
     def processTables(self):
-        def _to_ascii(msg):
-            if isinstance(msg, unicode):
-                return msg.encode('ascii', 'replace')
+        # —— 关键：先强制提交正在编辑的单元格 ——
+        self._commit_table_edits()
+        CLI_CODEC = 'GB18030'
+        def cli_print(msg):
             try:
-                return msg.decode('utf-8').encode('ascii', 'replace')
+                from abaqusGui import getAFXApp
+                mw = getAFXApp().getAFXMainWindow()
+                if isinstance(msg, unicode):
+                    b = msg.encode(CLI_CODEC, 'replace')
+                else:
+                    # bytes: 尝试按 CLI 编码验证；不行再按 utf-8 转
+                    try:
+                        msg.decode(CLI_CODEC)
+                        b = msg
+                    except Exception:
+                        try:
+                            b = msg.decode('utf-8').encode(CLI_CODEC, 'replace')
+                        except Exception:
+                            b = str(msg)
+                mw.writeToMessageArea(b)
             except Exception:
-                return unicode(msg, errors='replace').encode('ascii', 'replace')
-        wr = lambda t: getAFXApp().getAFXMainWindow().writeToMessageArea(_to_ascii(t))
+                try:
+                    mw.writeToMessageArea(str(msg))
+                except:
+                    pass
+        wr = cli_print
 
         try:
             # ------------------------------------------------ Points  ------------------------------------------------
