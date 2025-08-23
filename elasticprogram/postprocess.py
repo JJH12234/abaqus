@@ -14,6 +14,509 @@ import numpy as np
 import csv
 # import brittle_assess
 import datetime
+import xyPlot
+from abaqusConstants import PNG
+import sys, re
+IS_PY2 = (sys.version_info[0] == 2)
+if IS_PY2:
+    unicode_type = unicode
+    bytes_type = str
+else:
+    unicode_type = str
+    bytes_type = bytes
+
+def _computed_cycle_length(y, step_cfg):
+    """
+    根据外推类型和外推次数，回推出“真实计算周期”长度 L。
+    - Direct：最终列表长度 = L + N  ->  L = len(y) - N
+    - Add   ：最终列表长度 = L + 1   ->  L = len(y) - 1
+    备注：不改 JSON，只在画图阶段裁掉外推/增补段。
+    """
+    m = len(y)
+    mode = step_cfg.get('extrapolateType', 'Direct')
+    N = int(step_cfg.get('extrapolateTimes', 0) or 0)
+
+    if mode == 'Direct':
+        return max(1, m - N)
+    elif mode == 'Add':
+        # Add 模式下我们在代码里对最后一点做了“追加并累加外推增量”，
+        # 因此最终序列比真实周期多 1 个点
+        return max(1, m - 1)
+    else:
+        # None 或其它：按原样
+        return m
+def _pairs_first_cycles(y, step_cfg):
+    """仅返回前 L 个“真实计算周期”的 (x,y) 对，x 从 1 开始、步长 1。"""
+    if not y:
+        return []
+    L = _computed_cycle_length(y, step_cfg)
+    xs = range(1, L + 1)
+    return list(zip(xs, y[:L]))
+_name_safe_re = re.compile(r'[^A-Za-z0-9_-]+')
+def _xlfd(font='Arial', pt=60, weight='medium'):
+    # XLFD 用“十分之一点”为单位：60pt -> 600
+    size = int(pt * 10)
+    # 格式：-*-family-weight-slant-setwidth-addstyle-pixels-pt-resx-resy-spacing-avgwidth-registry-encoding
+    return "-*-{f}-{w}-r-normal-*-*-{s}-*-*-p-*-*-*".format(f=font, w=weight, s=size)
+
+def _big_fonts_for_xyplot(xyp, chart, scale=5.0):
+    # 以默认 12pt 为基准放大
+    tick_pt   = 12 * scale        # 刻度字号
+    label_pt  = 12 * scale        # 轴标签数字/文本字号
+    title_pt  = 14 * scale        # 轴标题字号稍大一点
+    legend_pt = 12 * scale        # 图例字号
+
+    # 兼容不同版本的轴访问方式
+    axes_x = getattr(chart, 'axes1', None)
+    axes_y = getattr(chart, 'axes2', None)
+    if axes_x and axes_y:
+        ax = axes_x[0]; ay = axes_y[0]
+    else:
+        ax = getattr(chart, 'xAxis1', None)
+        ay = getattr(chart, 'yAxis1', None)
+
+    try:
+        # 轴标题（X/Y）
+        ax.titleStyle.setValues(  font=_xlfd(pt=title_pt))
+        ay.titleStyle.setValues(  font=_xlfd(pt=title_pt))
+        # 轴刻度/标签（X/Y）
+        ax.labelStyle.setValues(  font=_xlfd(pt=label_pt))
+        ay.labelStyle.setValues(  font=_xlfd(pt=label_pt))
+        ax.tickStyle.setValues(   font=_xlfd(pt=tick_pt))
+        ay.tickStyle.setValues(   font=_xlfd(pt=tick_pt))
+    except Exception:
+        pass
+
+    # 图例字体（如果显示）
+    try:
+        # xyp.legend.textStyle.setValues(font=_xlfd(pt=legend_pt))
+        # xyp.legend.setValues(show=False)
+        chart.legend.setValues(show=False)
+    except Exception:
+        pass
+
+def _to_bytes(s):
+    """统一把要给 Abaqus 的字符串转成 bytes(str)，并尽量可打印"""
+    if isinstance(s, bytes_type):
+        return s
+    if isinstance(s, unicode_type):
+        # Windows 用 mbcs，Linux/非中文环境可改成 'utf-8'
+        return s.encode('mbcs', 'ignore')
+    return bytes_type(s)
+_name_safe_re = re.compile(r'[^A-Za-z0-9_-]+')
+def _safe_name(s, prefix='', maxlen=38, require_letter_start=True):
+    """
+    生成符合 Abaqus 命名规范的 ASCII 名字：
+    - 仅 A-Z a-z 0-9 _ -
+    - 不含 '.'
+    - 不以数字/空格/下划线开头；不以下划线/空格结尾
+    - 默认长度<=38（Repository 对象名上限）
+    """
+    b = _to_bytes(s)                          # 转 bytes(str)
+    b = _name_safe_re.sub(b'_', b)            # 非法字符 -> '_'
+    b = b.strip(b' _')                         # 去首尾空格/下划线
+    if not b:                                  # 空名兜底
+        b = b'N'
+    if require_letter_start and not (65 <= b[0] <= 90 or 97 <= b[0] <= 122):
+        b = b'P' + b                           # 必须字母起始
+    # 截断到上限
+    # 预留前缀位，避免截断后首尾又变成下划线
+    out = _to_bytes(prefix) + b
+    out = out[:maxlen].rstrip(b' _')
+    if not out:
+        out = b'P0'
+    return out
+
+def _safe_axis_label(chart, xlabel, ylabel):
+    # 均转 bytes
+    xlabel_b = _to_bytes(xlabel)
+    ylabel_b = _to_bytes(ylabel)
+    try:
+        chart.axes1[0].axisData.setValues(title=xlabel_b, useSystemTitle=False)
+        chart.axes2[0].axisData.setValues(title=ylabel_b, useSystemTitle=False)
+        return
+    except:
+        pass
+    try:
+        chart.xAxis1.axisData.setValues(title=xlabel_b, useSystemTitle=False)
+        chart.yAxis1.axisData.setValues(title=ylabel_b, useSystemTitle=False)
+    except:
+        pass
+def _repo_safe(prefix, base, maxlen=38):
+    """
+    为 Abaqus Repository 生成“更安全”的名字：
+    ...
+    """
+    s = re.sub(r'[^A-Za-z0-9_]+', '_', base)
+    s = s.strip('_')
+    if not s or not s[0].isalpha():
+        s = 'P' + s
+    name = (prefix + s)[:maxlen].rstrip('_')
+    return _to_bytes(name)  # ←← 保证 bytes 返回
+
+def _unique_plot_name(base_prefix='Plot_CFI_', maxlen=38):
+    """在 session.xyPlots 里找一个不重名的 Plot 名"""
+    i = 1
+    while True:
+        cand = _repo_safe(base_prefix, str(i), maxlen=maxlen)
+        if cand not in session.xyPlots.keys():
+            return cand
+        i += 1
+
+def _make_cfi_plot_finalonly(
+        fatigue_list, creep_list, crit_ab,
+        title_prefix, png_basename,
+        tick_inc=0.1,
+        # ↓ 新增：轴/标题字号参数（pt），以及字体族
+        font_face='Arial', pt_title=46, pt_label=36, pt_tick=32
+    ):
+    if not fatigue_list or not creep_list:
+        return
+
+    a, b   = float(crit_ab[0]), float(crit_ab[1])
+    x_last = float(creep_list[-1])
+    y_last = float(fatigue_list[-1])
+
+    judge_txt = "Pass" if is_below_double_breakline(x_last, y_last, (a, b)) else "NotPass"
+
+    base         = re.sub(r'[^A-Za-z0-9_]+', '_', "{}_{}".format(title_prefix, png_basename))
+    xy_name_line = _repo_safe('XY_CFI_L_', base)
+    xy_name_pt   = _repo_safe('XY_CFI_P_', base)
+    xy_name_halo = _repo_safe('XY_CFI_P_HALO_', base)
+    plot_name    = _repo_safe('Plot_CFI_', base)
+    file_base    = _repo_safe('CFI_', base)
+
+    # 画布/分辨率
+    try:
+        session.graphicsOptions.setValues(backgroundColor='#FFFFFF')
+        session.printOptions.setValues(vpBackground=ON)
+        session.pngOptions.setValues(imageSize=(3840, 2160))
+    except:
+        pass
+
+    # 清理旧对象
+    for n in (xy_name_line, xy_name_pt, xy_name_halo):
+        try: del session.xyDataObjects[n]
+        except: pass
+    try: del session.xyPlots[plot_name]
+    except: pass
+
+    # 数据
+    xy_line = session.XYData(name=xy_name_line, data=((0.0, 1.0), (a, b), (1.0, 0.0)))
+    xy_pt   = session.XYData(name=xy_name_pt,   data=((x_last, y_last),))
+    xy_halo = session.XYData(name=xy_name_halo, data=((x_last, y_last),))
+    
+
+    # 建图
+    try:
+        xyp = session.XYPlot(name=_to_bytes(plot_name))
+    except Exception:
+        xyp = session.XYPlot(name=_to_bytes(_unique_plot_name()))
+    chart = xyp.charts.values()[0]
+
+    # 曲线
+    c_line = session.Curve(xyData=xy_line)
+    c_pt_halo = session.Curve(xyData=xy_halo)
+    c_pt  = session.Curve(xyData=xy_pt)
+
+    # 关键：把曲线加入图表
+    chart.setValues(curvesToPlot=(c_line, c_pt_halo, c_pt))
+    _safe_axis_label(chart, xlabel='Creep Damage', ylabel='Fatigue Damage')
+
+    # —— 样式 —— #
+    # 折线（准则）
+    try:
+        c_line.setValues(displayTypes=(xyPlot.LINE,), useDefault=False) 
+        # 线更粗一点
+        c_line.lineStyle.setValues(color='Red', thickness=1.2)
+    except: pass
+
+    # 外白环（大一点，盖在红点下方）
+    try:
+        c_pt_halo.setValues(displayTypes=(xyPlot.SYMBOL,))
+        try:
+            c_pt_halo.symbolStyle.setValues(style=xyPlot.FILLED_CIRCLE, size=14, color='White')
+        except:
+            c_pt_halo.setValues(symbolStyle=session.SymbolStyle(style=xyPlot.FILLED_CIRCLE, size=14, color='White'))
+        # 不在图例里显示
+        try: c_pt_halo.setValues(showLegend=False)
+        except: pass
+    except: pass
+
+    # 红点（主点）
+    try:
+        c_pt.setValues(displayTypes=(xyPlot.SYMBOL,))
+        try:
+            c_pt.symbolStyle.setValues(style=xyPlot.FILLED_CIRCLE, size=12, color='Red')
+        except:
+            c_pt.setValues(symbolStyle=session.SymbolStyle(style=xyPlot.FILLED_CIRCLE, size=12, color='Red'))
+        try: c_pt.setValues(showLegend=False)
+        except: pass
+    except: pass
+
+    # 轴对象（新/旧两套命名兼容）
+    ax = getattr(chart, 'axes1', None)
+    ay = getattr(chart, 'axes2', None)
+    if ax and ay:
+        ax = ax[0]; ay = ay[0]
+    else:
+        ax = getattr(chart, 'xAxis1', None)
+        ay = getattr(chart, 'yAxis1', None)
+
+    # 轴标题 & 刻度
+    try:
+        chart.xAxis1.axisData.setValues(
+            title=_to_bytes('Fatigue damage'),
+            useSystemTitle=False, tickMode=INCREMENT, tickIncrement=float(tick_inc)
+        )
+        chart.yAxis1.axisData.setValues(
+            title=_to_bytes('Creep damage'),
+            useSystemTitle=False, tickMode=INCREMENT, tickIncrement=float(tick_inc)
+        )
+    except:
+        pass
+
+    # 字体放大（用 XLFD，跨版本更稳定）
+    def _xlfd_face(pt): return _xlfd(font=font_face, pt=pt, weight='medium')
+    try:
+        ax.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
+        ay.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
+        ax.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
+        ay.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
+        ax.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
+        ay.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
+    except:
+        # 旧路径兜底
+        try:
+            ax.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
+            ay.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
+            ax.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
+            ay.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
+            ax.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
+            ay.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
+        except:
+            pass
+
+    # 网格稍微加粗，易读
+    try:
+        chart.gridArea.setValues(show=True)
+        chart.gridArea.majorLineStyle.setValues(color='#CCCCCC', thickness=0.4)
+        chart.gridArea.minorLineStyle.setValues(color='#E6E6E6', thickness=0.2)
+    except:
+        pass
+
+    # 隐藏图例（全局 + 曲线级别已关闭）
+    try:
+        chart.legend.setValues(show=False)   # 这条才是视口里真正的图例
+    except:
+        pass
+    try: xyp.legend.setValues(show=False)
+    except: pass
+
+    # 标题
+    try:
+        xyp.title.setValues(text=_to_bytes(u"CFI Check ({}) - {}".format(judge_txt, title_prefix)))
+        xyp.title.style.setValues(font=_xlfd(font=font_face, pt=max(pt_title, 46), weight='bold'), color='Black')
+    except:
+        pass
+
+    # 复位视图，避免缩放导致“白图”
+    try: xyp.resetView()
+    except: pass
+
+    # 显示并导出
+    vp = session.viewports[session.currentViewportName]
+    vp.setValues(displayedObject=xyp)
+    session.printOptions.setValues(reduceColors=False)
+    session.printToFile(fileName=_to_bytes(file_base), format=PNG, canvasObjects=(vp,))
+
+
+
+def _make_xyplot_and_png(xy_pairs, title_text, ylabel_text, png_basename,
+                         x_tick_inc=1.0, 
+                         font_face='Arial',
+                         pt_title=42, pt_label=36, pt_tick=32, pt_legend=30):
+
+    if not xy_pairs:
+        return
+
+    # 统一 float
+    xy_pairs = [(float(x), float(y)) for (x, y) in xy_pairs]
+
+    # —— 安全命名 —— #
+    xy_name   = _safe_name(png_basename, prefix='XY_')
+    plot_name = _safe_name(png_basename, prefix='Plot_')
+    file_base = _safe_name(png_basename)
+
+    # —— 背景/分辨率 —— #
+    try:
+        session.graphicsOptions.setValues(backgroundColor='#FFFFFF')
+        session.printOptions.setValues(vpBackground=ON)
+        session.pngOptions.setValues(imageSize=(3840, 2160))
+    except Exception:
+        pass
+
+    # —— 清理同名对象 —— #
+    try: del session.xyDataObjects[xy_name]
+    except: pass
+    try: del session.xyPlots[plot_name]
+    except: pass
+
+    # —— 建图 —— #
+    xy_obj = session.XYData(name=xy_name, data=tuple(xy_pairs))
+    xyp = session.XYPlot(name=plot_name)
+    chart = xyp.charts.values()[0]
+    c = session.Curve(xyData=xy_obj)
+    chart.setValues(curvesToPlot=[c])
+    try:
+        for cv in chart.curvesToPlot:
+            try:
+                cv.setValues(showLegend=False)
+            except:
+                pass
+    except:
+        pass
+
+    # 2) 关掉当前图表的图例（两种句柄各关一次）
+    try:
+        cname = xyp.charts.keys()[0]  # 当前XYPlot里唯一的Chart名
+        session.charts[cname].legend.setValues(show=False)
+        xyp.charts[cname].legend.setValues(show=False)
+    except:
+        pass
+
+    # 3) 关掉XYPlot级别的图例句柄
+    try:
+        xyp.legend.setValues(show=False)
+    except:
+        pass
+
+    # 4) 新建图表的默认图例也关掉，防止被“恢复默认”再打开
+    try:
+        session.defaultChartOptions.legend.setValues(show=False)
+    except:
+        pass
+
+    # 曲线样式（可改）
+    try:
+        c.setValues(useDefault=False)
+        c.lineStyle.setValues(color='Red', thickness=1.2)
+    except Exception:
+        pass
+
+    # ===== 坐标轴对象（两种命名兼容） =====
+    ax = getattr(chart, 'axes1', None)
+    ay = getattr(chart, 'axes2', None)
+    if ax and ay:
+        ax = ax[0]; ay = ay[0]
+    else:
+        ax = getattr(chart, 'xAxis1', None)
+        ay = getattr(chart, 'yAxis1', None)
+
+    # X/Y 轴标题文字
+    _safe_axis_label(chart, xlabel=u'Cycle', ylabel=str(ylabel_text))
+
+    # X 轴刻度：固定增量
+    try:
+        ax.axisData.setValues(tickMode=INCREMENT, tickIncrement=float(x_tick_inc))
+    except Exception:
+        # 有的版本是直接在轴上
+        try:
+            ax.setValues(tickMode=INCREMENT, tickIncrement=float(x_tick_inc))
+        except Exception:
+            pass
+
+    # ===== 字体：统一 XLFD，确保真放大 =====
+    def _xlfd_face(pt):
+        return _xlfd(font=font_face, pt=pt, weight='medium')
+
+    # 先尝试 axisData.*Style（较新/常见）
+    try:
+        ax.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
+        ay.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
+        ax.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
+        ay.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
+        ax.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
+        ay.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
+    except Exception:
+        # 兼容旧路径：axes1[0].titleStyle / labelStyle / tickStyle
+        try:
+            ax.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
+            ay.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
+            ax.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
+            ay.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
+            ax.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
+            ay.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
+        except Exception:
+            pass
+
+    # 总标题
+    try:
+        xyp.title.setValues(text=_to_bytes(title_text))
+        xyp.title.style.setValues(font=_xlfd(font=font_face, pt=max(pt_title, 28), weight='bold'),
+                                  color='Black')
+    except Exception:
+        pass
+
+    # 网格线（可读性）
+    try:
+        chart.gridArea.setValues(show=True)
+        chart.gridArea.majorLineStyle.setValues(color='#DDDDDD', thickness=0.4)
+        chart.gridArea.minorLineStyle.setValues(color='#EEEEEE', thickness=0.2)
+    except Exception:
+        pass
+
+    # 图例：字号 & 显示
+    try:
+        xyp.legend.setValues(show=False)
+        chart.legend.setValues(show=False)
+        # xyp.legend.textStyle.setValues( font=_xlfd(font=font_face, pt=pt_legend), color='Black')
+        # xyp.legend.titleStyle.setValues(font=_xlfd(font=font_face, pt=pt_legend), color='Black')
+        # xyp.legend.setValues(position=xyPlot.CENTER_RIGHT)
+    except Exception:
+        pass
+
+    # 展示 & 导出
+    vp = session.viewports[session.currentViewportName]
+    vp.setValues(displayedObject=xyp)
+    session.printOptions.setValues(reduceColors=False)
+    session.printToFile(fileName=file_base, format=PNG, canvasObjects=(vp,))
+
+
+
+def _render_damage_plots(Damages, datetimenow, Step_configs):
+    """只影响出图，不改 JSON：只画真实周期（去掉 holding/外推段）"""
+    for part, nodes in Damages.items():
+        for node, d in nodes.items():
+            creep = d.get('CreepDamageByCycle', [])
+            fatigue = d.get('FatigueDamageByCycle', [])
+            creep_pairs   = _pairs_first_cycles(d.get('CreepDamageByCycle', []),   Step_configs)
+            fatigue_pairs = _pairs_first_cycles(d.get('FatigueDamageByCycle', []), Step_configs)
+
+            base_raw = u"{}__{}__{}".format(part, node, datetimenow).replace(':', "'").replace(' ', '_')
+
+            _make_xyplot_and_png(
+                xy_pairs=fatigue_pairs,
+                title_text=u"Fatigue Damage - {} {}".format(part, node),
+                ylabel_text=u'Fatigue Damage',
+                png_basename='FatigueDamage_' + base_raw
+            )
+            _make_xyplot_and_png(
+                xy_pairs=creep_pairs,
+                title_text=u"Creep Damage - {} {}".format(part, node),
+                ylabel_text='Creep Damage',
+                png_basename='CreepDamage_' + base_raw
+            )
+            base_raw = u"{}__{}__{}".format(part, node, datetimenow).replace(':', "'").replace(' ', '_')
+            _make_cfi_plot_finalonly(
+    fatigue_list=fatigue,
+    creep_list=creep,
+    crit_ab=tuple(Step_configs['damageJudge']),   # (a, b)
+    title_prefix=u"{} {}".format(part, node),
+    png_basename='CFI_' + base_raw,
+    tick_inc=0.1          # 想改网格密度就调这里
+)
+
 
 def safe_del(name, container):
     "若存在同名对象则先删除"
@@ -174,6 +677,17 @@ def kernel_CreepFatigueDamage(tabledata,Field_configs,Step_configs,kw1=(),kw2=()
     with open(r'Damage {}.json'.format(datetimenow), 'w') as f:
         json.dump(Damages, f, indent=4)
     print(u'Damage {}.json 已输出到工作路径'.format(datetimenow).encode('GB18030'))
+    try:
+        _render_damage_plots(Damages, datetimenow, Step_configs)
+        print(u'损伤折线图(两张/节点)已导出为 PNG'.encode('GB18030'))
+    except Exception as _e:
+        # 出图失败不影响主流程
+        try:
+            msg = unicode(str(_e), 'utf-8', errors='ignore')
+        except:
+            msg = str(_e)
+        print(u'警告：绘制损伤折线图失败：{}'.format(msg).encode('GB18030'))
+
 
 def kernel_IE(tabledata,Field_configs,Step_configs,kw1=(),kw2=(),path_extras_configs={}):
     viewport=get_current_viewport()
