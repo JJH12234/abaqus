@@ -52,70 +52,104 @@ def get_current_model():
     # 如果用户选择“YES”或模型名称不包含'Model-0'，则直接返回当前模型。
     return mdb.models[modelname]
 
-# 定义主参数化建模函数，接收一个参数列表。
 def pre_paraModeling(ParaList):
     # 获取当前模型对象。
-    m=get_current_model()
-    # 调用process_parameters函数，根据类型拆分参数列表为草图数据和特征数据。
+    m = get_current_model()
+
     # 按类型拆分
-    [sketch_data,features_data]=process_parameters(ParaList)
-    # 初始化一个字典，用于按部件和特征拆分草图参数。
-    # 键为(部件名, 特征名)，值为对应的参数行列表。
-    # 按part features拆分草图参数
+    [sketch_data, features_data] = process_parameters(ParaList)
+
+    # —— 按 part & feature 分组草图参数 —— #
     p_f_s = {}
-    # 遍历草图数据列表中的每一行。
     for row in sketch_data:
-        # 获取第四列的部件名称。
-        partname = row[3]  # 第四列是 part
-        # 获取第五列的特征名称。
-        featurename = row[4]  # 第五列是 feature
-        # 使用 (部件名, 特征名) 作为字典的键。
-        key = (partname, featurename)  # 使用 (part, feature) 作为键
-        # 如果键不在字典中，则初始化一个空列表。
+        if not row or len(row) < 5:
+            continue
+        partname = row[3]            # 第四列：part
+        featurename = row[4]         # 第五列：feature
+        key = (partname, featurename)
         if key not in p_f_s:
             p_f_s[key] = []
-        # 将当前行数据添加到对应键的列表中。
         p_f_s[key].append(row)
-    # 遍历按草图分组的参数数据，对每个草图统一调用修改函数。
-    # 按草图统一调起sketch修改函数
-    for key, rows in p_f_s.items():
-        # print(key) # 调试用，可以打印当前处理的键。
-        # 检查部件名称是否存在于当前模型的部件列表中。
-        if str(key[0]) in m.parts:
-            # 获取对应的特征对象。
-            f=m.parts[str(key[0])].features[str(key[1])]
-            # 获取当前视口名称。
-            viewport = session.currentViewportName
-            # 将当前视口显示的对象设置为当前部件，以便进行草图编辑。
-            session.viewports[viewport].setValues(displayedObject=m.parts[str(key[0])])
-            # 调用paraModeling_sketch函数，修改草图参数。
-            paraModeling_sketch(m,f,rows)
-    # 遍历特征数据列表，调起其他修改函数。
-    # 调起其他修改函数
-    for row in features_data:
-        # 检查部件名称是否存在于当前模型的部件列表中。
-        # 注意：这里的key[0]可能是一个bug，应该使用row[3]来获取当前行的部件名。
-        if str(key[0]) in m.parts:
-            try:
-                # 获取对应的特征对象。
-                f=m.parts[str(row[3])].features[str(row[4])]
-                # 调用paraModeling_features函数，修改特征参数。
-                paraModeling_features(f,row)
-            # 捕获KeyError异常，如果部件或特征不存在。
-            except KeyError:
-                # 打印错误信息。注意：这里的partname和featurename是循环外的，可能不准确。
-                print("{p} has no {f} feature".format(p=partname,f=featurename))
-                # 继续执行，忽略当前错误。
-                pass
-    # 调用函数重新生成模型中的所有部件和装配体。
-    # 模型重生成
-    paraModeling_regen(m)
-    # 调用函数重新生成网格。
-    # 网格重生成
-    mesh_regen(m)
-    # 调用函数重新生成装配体。
-    ass_regen(m)
 
+    # —— 逐草图修改 —— #
+    for key, rows in p_f_s.items():
+        part_key = str(key[0]).strip()
+        feat_key = str(key[1]).strip()
+
+        # part 严格命中
+        if part_key in m.parts:
+            part = m.parts[part_key]
+
+            # feature 先严格命中
+            if feat_key in part.features.keys():
+                f = part.features[feat_key]
+            else:
+                # 最小兜底：忽略大小写 + 去首尾空格 做一次匹配
+                hit = None
+                low_target = feat_key.lower()
+                for k in part.features.keys():
+                    if k.strip().lower() == low_target:
+                        hit = k
+                        break
+                if hit is None:
+                    print(u"{p} has no {f} feature. Available: {keys}"
+                          .format(p=part_key, f=feat_key,
+                                  keys=u', '.join(part.features.keys())))
+                    continue
+                f = part.features[hit]
+
+            # 切视口（可选）
+            try:
+                viewport = session.currentViewportName
+                session.viewports[viewport].setValues(displayedObject=part)
+            except Exception:
+                pass
+
+            # 修改草图参数
+            paraModeling_sketch(m, f, rows)
+
+    # —— 逐特征修改 —— #
+    for row in features_data:
+        if not row or len(row) < 5:
+            continue
+        part_key = str(row[3]).strip()
+        feat_key = str(row[4]).strip()
+
+        if part_key in m.parts:
+            part = m.parts[part_key]
+            try:
+                # 先严格命中
+                if feat_key in part.features.keys():
+                    f = part.features[feat_key]
+                else:
+                    # 最小兜底：忽略大小写 + 去首尾空格
+                    hit = None
+                    low_target = feat_key.lower()
+                    for k in part.features.keys():
+                        if k.strip().lower() == low_target:
+                            hit = k
+                            break
+                    if hit is None:
+                        print(u"{p} has no {f} feature. Available: {keys}"
+                              .format(p=part_key, f=feat_key,
+                                      keys=u', '.join(part.features.keys())))
+                        continue
+                    f = part.features[hit]
+
+                # 真正设置特征参数
+                paraModeling_features(f, row)
+
+            except KeyError:
+                # ✅ 用当前行的 part_key / feat_key 打印，避免“串变量”
+                print(u"{p} has no {f} feature".format(p=part_key, f=feat_key))
+                pass
+        else:
+            print(u"[WARN] Part '{0}' not found in model.".format(part_key))
+
+    # —— 重生成 —— #
+    paraModeling_regen(m)
+    mesh_regen(m)
+    ass_regen(m)
 # 定义一个函数，用于参数化修改草图。
 def paraModeling_sketch(m,feature,paralist):
     # 获取特征的原始草图对象。
