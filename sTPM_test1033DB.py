@@ -2,6 +2,7 @@
 from abaqusConstants import *
 # 从 abaqusConstants 模块导入所有常量，这些常量通常用于定义Abaqus中的各种选项和行为。
 from abaqusGui import *
+
 # 从 abaqusGui 模块导入所有GUI相关的类和函数，用于构建Abaqus插件的用户界面。
 from kernelAccess import mdb, session
 # 从 kernelAccess 模块导入 mdb 和 session 对象，mdb 用于访问Abaqus模型数据库，session 用于访问当前会话。
@@ -79,8 +80,9 @@ class STPM_test1033DB(AFXDataDialog):
         # 定义一个ID常量， 用于“更新模型”操作的点击事件。
         ID_CLICKED_AMPPAIR,
         # 定义一个ID常量， 用于“AMPPAIR”操作的点击事件。
-        ID_PARAMNAME_DBLCLICK
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 21)
+        ID_PARAMNAME_DBLCLICK,
+        ID_CLICKED_SIZEFIG
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 22)
     # 这些ID常量被赋值为从 AFXForm.ID_LAST+1 开始的连续整数，用于唯一标识GUI事件。
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
@@ -314,12 +316,16 @@ class STPM_test1033DB(AFXDataDialog):
         # 第三次从PNG文件创建图标对象。
         FXLabel(p=TabItem_22, text='', ic=icon)
         # 第三次创建一个 FXLabel 控件，显示图标。
-        updateBtn = FXButton(p=TabItem_22,
+        btnRow = FXHorizontalFrame(p=TabItem_22, opts=FRAME_NONE|LAYOUT_FILL_X)
+        updateBtn = FXButton(p=btnRow,
                      text=u'更新模型尺寸'.encode('GB18030'),
                      ic=None,
                      tgt=self,
                      sel=self.ID_CLICKED_UPDATEMODEL,
                      opts=BUTTON_NORMAL | JUSTIFY_LEFT)
+        FXLabel(p=btnRow, text='', opts=LAYOUT_FILL_X)
+        sizeFigBtn = FXButton(p=btnRow,text=u'模型尺寸标注图'.encode('GB18030'),ic=None, tgt=self, sel=self.ID_CLICKED_SIZEFIG,opts=BUTTON_NORMAL|LAYOUT_RIGHT)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_SIZEFIG, STPM_test1033DB.onClickSizeDiagram)
         # 创建一个 FXButton 控件，用于“更新模型尺寸”操作。
         # text: 按钮文本，使用GB18030编码显示中文。
         # ic=None: 没有图标。
@@ -1980,70 +1986,118 @@ class STPM_test1033DB(AFXDataDialog):
         # 返回最终的JSON数据
         return jsondata
     def onParamNameDblClicked(self, sender, sel, ptr):
-        """双击‘参数名’列：进入草图并聚焦到该参数的尺寸（安全精简版）"""
+        """双击（或单击映射过来时）：进入草图并高亮/聚焦该参数的尺寸
+
+        说明：
+        1) 优先尝试 s.editDimension(object=d) —— 成功即出现红色高亮
+        2) 若不支持，再通过 setSelection 闪烁一次提示
+        3) 最后兜底：对参数做一次“无改动”setValues 触发刷新
+        """
         try:
             tbl = self.getTable()
             row = tbl.getCurrentRow()
             col = tbl.getCurrentColumn()
+            # 只有在“参数名”列（第1列）且是有效行才响应
             if row <= 0 or col != 1:
                 return
 
             param_name   = tbl.getItemText(row, 1).strip()
             part_name    = tbl.getItemText(row, 4).strip()
             feature_name = tbl.getItemText(row, 5).strip()
-            if not part_name or not feature_name:
+            if not part_name or not feature_name or not param_name:
                 getAFXApp().getAFXMainWindow().writeToMessageArea(
-                    u"跳转失败：缺少部件/特征".encode('GB18030'))
+                    u"跳转失败：缺少部件/特征/参数名".encode('GB18030'))
                 return
 
-            # 逐行拼脚本，避免 % 格式化冲突 & 顶格无缩进
+            # 逐行构造脚本，避免字符串格式化冲突
             cmd = "\n".join([
                 "from abaqus import mdb, session",
                 "from abaqusConstants import *",
-                "import re",
+                "import re, time",
                 "vp = session.currentViewportName",
-                "partName = {!r}".format(part_name),
-                "featName = {!r}".format(feature_name),
+                "partName  = {!r}".format(part_name),
+                "featName  = {!r}".format(feature_name),
+                "paramName = {!r}".format(param_name),
+
+                # ——定位模型/部件/特征，进入草图编辑叠加态
                 "pModel = None",
-                "for _mn,_m in mdb.models.items():",
-                "    if partName in _m.parts: pModel=_mn; break",
+                "for _mn, _m in mdb.models.items():",
+                "    if partName in _m.parts:",
+                "        pModel = _mn; break",
                 "if pModel is None: raise RuntimeError('Part not found: %s' % partName)",
                 "m = mdb.models[pModel]",
                 "p = m.parts[partName]",
                 "keys = [k for k in p.features.keys() if k.upper()==featName.upper()]",
                 "if not keys: raise RuntimeError('Feature not found: %s' % featName)",
                 "fk = keys[0]",
+
+                # 清理旧的 __edit__ 草图
                 "if '__edit__' in m.sketches:",
-                "    try: m.sketches['__edit__'].unsetPrimaryObject()",
+                "    try:",
+                "        m.sketches['__edit__'].unsetPrimaryObject()",
                 "    except: pass",
                 "    del m.sketches['__edit__']",
+
                 "s0 = p.features[fk].sketch",
                 "m.ConstrainedSketch(name='__edit__', objectToCopy=s0)",
-                "s = m.sketches['__edit__']",
+                "s  = m.sketches['__edit__']",
                 "s.setPrimaryObject(option=SUPERIMPOSE)",
                 "p.projectReferencesOntoSketch(sketch=s, upToFeature=p.features[fk], filter=COPLANAR_EDGES)",
                 "session.viewports[vp].setValues(displayedObject=s)",
-                "",
-                "# 用参数反查尺寸索引（最稳妥的做法）",
-                "paramName = {!r}".format(param_name),
+
+                # ——用参数反查尺寸对象
+                "d = None",
                 "try:",
-                "    prm = s.parameters[paramName]",
+                "    prm  = s.parameters[paramName]",
                 "    mobj = re.search(r'dimensions\\[(\\d+)\\]', prm.path)",
-                "    if not mobj: raise KeyError",
-                "    didx = int(mobj.group(1))",
-                "    d = s.dimensions[didx]",
-                "    # 若有文本点就用其做视图中心；否则全图",
-                "    try:",
-                "        x,y = map(float, d.textPoint)",
+                "    if mobj:",
+                "        didx = int(mobj.group(1))",
+                "        d = s.dimensions[didx]",
+                "except: pass",
+
+                # ——视图尽量对准该尺寸文本点；否则全图
+                "try:",
+                "    if d is not None and hasattr(d, 'textPoint'):",
+                "        x, y = map(float, d.textPoint)",
                 "        v = session.viewports[vp].view",
-                "        # 只缩放宽高到当前的 0.35，避免改 cameraPosition（更稳）",
                 "        v.setValues(cameraTarget=(x, y, 0.0))",
                 "        v.setValues(width=max(v.width*0.35, 10.0), height=max(v.height*0.35, 10.0))",
-                "    except:",
+                "    else:",
                 "        session.viewports[vp].view.fitView()",
-                "except Exception as _e:",
-                "    # 找不到尺寸也别崩，直接自适应视图",
+                "except:",
                 "    session.viewports[vp].view.fitView()",
+
+                # ——高亮策略：多级降级保证尽可能看到红色
+                "highlighted = False",
+
+                # 1) 首选：直接进入尺寸编辑（很多版本会变红）
+                "try:",
+                "    if d is not None and hasattr(s, 'editDimension'):",
+                "        s.editDimension(object=d)",
+                "        highlighted = True",
+                "except: pass",
+
+                # 2) 次选：通过 selection 闪烁来提示
+                "try:",
+                "    if (not highlighted) and (d is not None):",
+                "        try: s.unsetSelection()",
+                "        except: pass",
+                "        try: s.setSelection(dimensions=(d, ))",
+                "        except: pass",
+                "        time.sleep(0.05)",
+                "        try: s.unsetSelection()",
+                "        except: pass",
+                "        try: s.setSelection(dimensions=(d, ))",
+                "        except: pass",
+                "        highlighted = True",
+                "except: pass",
+
+                # 3) 兜底：对参数做一次“无改动 setValues”触发界面刷新（模拟 PM 单击）
+                "try:",
+                "    if (not highlighted) and (paramName in s.parameters.keys()):",
+                "        _expr = s.parameters[paramName].expression",
+                "        s.parameters[paramName].setValues(expression=_expr)",
+                "except: pass",
             ])
 
             sendCommand(cmd)
@@ -2051,6 +2105,8 @@ class STPM_test1033DB(AFXDataDialog):
         except Exception as e:
             getAFXApp().getAFXMainWindow().writeToMessageArea(
                 u"跳转失败: {}".format(unicode(str(e), 'utf-8', 'replace')).encode('GB18030'))
+
+
     # 定义处理“更新模型”按钮点击事件的方法
     def onUpdateModelClicked(self, sender, sel, ptr):
         # 获取Abaqus主窗口实例
@@ -2099,6 +2155,125 @@ class STPM_test1033DB(AFXDataDialog):
             (u"模型尺寸已根据 {file} | Sheet: {sheet} 更新完毕\n"
             .format(file=os.path.basename(excel_path), sheet=sheet_name))
             .encode('GB18030'))
+
+
+    # —— 槽函数：弹出“模型尺寸标注图”对话框 —— 
+
+    def onClickSizeDiagram(self, sender, sel, ptr):
+        IS_PY2 = (sys.version_info[0] == 2)
+        def _b(s, fallback='GB18030'):
+            if IS_PY2:
+                try:
+                    # 已经是 bytes
+                    if isinstance(s, str):
+                        return s
+                    # 是 unicode
+                    return s.encode('mbcs')  # Windows 本地编码
+                except Exception:
+                    try:
+                        return s.encode('gbk', 'replace')
+                    except Exception:
+                        return s.encode(fallback, 'replace')
+            else:
+                # Py3 不会走这里，但保留接口
+                return s if isinstance(s, str) else str(s)
+
+        try:
+            # 显示窗口建议尺寸；图像按此上限等比缩小
+            MAX_W, MAX_H = 900, 620
+
+            # 保存图标引用以防被 GC
+            if not hasattr(self, '_size_icons'):
+                self._size_icons = []
+
+            if not hasattr(self, 'SizeFigDlg') or self.SizeFigDlg is None:
+                self.SizeFigDlg = AFXDialog(
+                    _b(u'模型尺寸标注图'),
+                    self.DISMISS, DIALOG_ACTIONS_SEPARATOR,
+                    x=0, y=0, w=950, h=630
+                )
+
+                main = FXHorizontalFrame(
+                    self.SizeFigDlg,
+                    FRAME_RAISED | FRAME_SUNKEN | LAYOUT_FILL_X | LAYOUT_FILL_Y
+                )
+
+                tabBook = FXTabBook(
+                    main, None, 0,
+                    TABBOOK_LEFTTABS | LAYOUT_FILL_X | LAYOUT_FILL_Y
+                )
+
+                thisDir = os.path.dirname(os.path.abspath(__file__))
+                imgDir  = os.path.join(thisDir, 'SizeFig')
+
+                for i in range(1, 7):
+                    FXTabItem(tabBook, _b(str(i)), None, TAB_LEFT)
+
+                    scroller = FXScrollWindow(
+                        tabBook, SCROLLERS_NORMAL | LAYOUT_FILL_X | LAYOUT_FILL_Y
+                    )
+                    page = FXHorizontalFrame(
+                        scroller, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y
+                    )
+
+                    imgpath = os.path.join(imgDir, '%d.png' % i)
+
+                    if os.path.exists(imgpath):
+                        # 读入 PNG
+                        icon = afxCreatePNGIcon(imgpath)
+
+                        # —— 等比缩小 —— #
+                        try:
+                            iw, ih = icon.getWidth(), icon.getHeight()
+                            if iw <= 0 or ih <= 0:
+                                raise ValueError('bad image size')
+
+                            scale = min(float(MAX_W)/float(iw),
+                                        float(MAX_H)/float(ih), 1.0)
+                            if scale < 1.0:
+                                new_w = max(1, int(iw * scale))
+                                new_h = max(1, int(ih * scale))
+                                icon.scale(new_w, new_h)
+
+                            # 提交像素到图形端
+                            try:
+                                icon.create()
+                            except Exception:
+                                pass
+                            try:
+                                icon.render()
+                            except Exception:
+                                pass
+
+                        except Exception:
+                            # 缩放失败则原图显示
+                            pass
+
+                        # 保存引用避免被回收
+                        self._size_icons.append(icon)
+
+                        # 居中放置
+                        FXLabel(page, _b(''), icon,
+                                LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
+
+                    else:
+                        # 路径里可能有中文，构造纯 ASCII 提示避免再次编码报错
+                        FXLabel(page, _b(u'未找到图片'), None,
+                                LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
+
+                self.SizeFigDlg.create()
+
+            self.SizeFigDlg.show()
+            return 1
+
+        except Exception as e:
+            try:
+                getAFXApp().getAFXMainWindow().writeToMessageArea(
+                    'Size diagram error: ' + str(e)
+                )
+            except:
+                pass
+            return 0
 
 
     # 定义处理“导入1”按钮点击事件的方法
