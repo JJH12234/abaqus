@@ -12,7 +12,6 @@ from abaqus import *
 # 从abaqusConstants模块导入所有常量，例如YES, NO, CANCEL等。
 from abaqusConstants import *
 
-# 定义一个函数，用于获取当前Abaqus会话中正在显示的模型。
 def get_current_model():
     # 函数的文档字符串，简要说明其功能。
     """获取当前视口关联的模型"""
@@ -27,7 +26,7 @@ def get_current_model():
         # 如果是'Model-0'，则弹出一个警告对话框，提示用户不建议直接编辑此模型。
         # 用户可以选择继续、复制新模型或取消。
         flag=getWarningReply(
-            u'警告： 不推荐用户自行编辑Model-0！\n YES以强制编辑; No建立副本并编辑;'.encode('GB18030'), (YES,NO,CANCEL))
+            'WARRNING: Edit Model-0 is not recommanded for user!\n YES-continue; No-copyNew;', (YES,NO,CANCEL))
     # 如果用户选择“No”（不继续编辑，复制新模型）。
     if flag==NO:
         # 为新模型生成一个建议的名称，将'Model-0'替换为'NewModel'。
@@ -52,12 +51,14 @@ def get_current_model():
     # 如果用户选择“YES”或模型名称不包含'Model-0'，则直接返回当前模型。
     return mdb.models[modelname]
 
+# 定义主参数化建模函数，接收一个参数列表。
+# 定义主参数化建模函数，接收一个参数列表。
 def pre_paraModeling(ParaList):
     # 获取当前模型对象。
     m = get_current_model()
 
     # 按类型拆分
-    [sketch_data, features_data] = process_parameters(ParaList)
+    [sketch_data, features_data, mesh_data] = process_parameters(ParaList)
 
     # —— 按 part & feature 分组草图参数 —— #
     p_f_s = {}
@@ -148,6 +149,7 @@ def pre_paraModeling(ParaList):
 
     # —— 重生成 —— #
     paraModeling_regen(m)
+    apply_mesh_instructions(m, mesh_data)
     mesh_regen(m)
     ass_regen(m)
 # 定义一个函数，用于参数化修改草图。
@@ -229,17 +231,114 @@ def paraModeling_regen(m):
             pass
     # 重新生成模型的根装配体。
     m.rootAssembly.regenerate()
+def apply_mesh_instructions(m, mesh_rows):
+    """执行 Excel 中的网格种子行"""
+    if not mesh_rows:
+        return
+
+    for row in mesh_rows:
+        try:
+            set_name  = str(row[0]).strip()   # 第1列：集合名（Edge set）
+            val_raw   = row[1]                # 第2列：size 或 number
+            method    = str(row[2]).strip()   # 第3列：方法名
+            part_name = str(row[3]).strip()   # 第4列：部件
+
+            if part_name not in m.parts:
+                print(u"[Mesh] Part '{}' not found; skip.".format(part_name))
+                continue
+
+            p = m.parts[part_name]
+
+            # ---- 统一把值转成数字 ----
+            # 允许用户在表里写成 '5'、'5.0' 之类
+            try:
+                # number 需要整数，其它按浮点
+                if method == 'seedEdgeByNumber':
+                    val = int(float(val_raw))
+                else:
+                    val = float(val_raw)
+            except Exception:
+                print(u"[Mesh] Bad value in column-2 for row: {}".format(row))
+                continue
+
+            # ---- 三种方法 ----
+            if method == 'seedPart':
+                # 这里可按需先清网格（你宏里有 deleteMesh）
+                try:
+                    p.deleteMesh()
+                except Exception:
+                    pass
+                p.seedPart(size=val, deviationFactor=0.1, minSizeFactor=0.1)
+
+            elif method == 'seedEdgeBySize':
+                if set_name in p.sets:
+                    edges = p.sets[set_name].edges
+                    if len(edges) == 0:
+                        print(u"[Mesh] Set '{}' in part '{}' has no edges.".format(set_name, part_name))
+                        continue
+                    p.seedEdgeBySize(edges=edges, size=val,
+                                     deviationFactor=0.1, minSizeFactor=0.1,
+                                     constraint=FINER)
+                else:
+                    print(u"[Mesh] Set '{}' not found in part '{}'.".format(set_name, part_name))
+
+            elif method == 'seedEdgeByNumber':
+                if set_name in p.sets:
+                    edges = p.sets[set_name].edges
+                    if len(edges) == 0:
+                        print(u"[Mesh] Set '{}' in part '{}' has no edges.".format(set_name, part_name))
+                        continue
+                    p.seedEdgeByNumber(edges=edges, number=val, constraint=FINER)
+                else:
+                    print(u"[Mesh] Set '{}' not found in part '{}'.".format(set_name, part_name))
+
+            else:
+                print(u"[Mesh] Unknown method '{}'; skip.".format(method))
+
+        except Exception as e:
+            print(u"[Mesh] Fail on row {} -> {}".format(row, str(e)))
 
 # 定义一个函数，用于重新生成模型中所有部件的网格。
-def mesh_regen(m):
-    # 提示：需要注意修改网格类型（传热/力学），这里只是生成网格。
-    #记得修改网格类型：传热/力学
-    # 遍历模型中所有部件的名称。
-    for part in m.parts.keys():
-        # 为当前部件生成网格。
-        m.parts[part].generateMesh()
-    # 占位符，表示后续可能需要添加网格检测功能。
-    pass#后续需要网格检测
+def mesh_regen(m, delete_first=True):
+    """
+    Regenerate mesh for all parts in model `m`.
+    - delete_first: True 时先删除已有原生网格，再生成新网格。
+    - 仅使用 print（Py2.7 兼容）。
+    返回 (ok_list, fail_list) 便于上层判断。
+    """
+    try:
+        parts = getattr(m, 'parts', {})
+    except Exception as e:
+        print("mesh_regen: cannot access model.parts: %s" % e)
+        return [], []
+
+    ok, fail = [], []
+
+    for partname, p in parts.items():
+        try:
+            if delete_first:
+                # 兼容两种 API：deleteMesh((p,)) 与 deleteMesh()
+                try:
+                    p.deleteMesh((p,))   # 新一点的 API 需要传 regions
+                except TypeError:
+                    p.deleteMesh()       # 旧版可无参
+                except Exception as de:
+                    print("[WARN] deleteMesh on %s: %s" % (partname, de))
+
+            # 生成网格（前提：已设置全局/局部种子）
+            p.generateMesh()
+            print("%s regen OK" % partname)
+            ok.append(partname)
+
+        except Exception as e:
+            print("%s regen fails! %s" % (partname, e))
+            fail.append(partname)
+
+    # 简要汇总
+    print("mesh_regen summary: %d ok, %d fail" % (len(ok), len(fail)))
+    if fail:
+        print("failed parts: %s" % ", ".join(fail))
+    return ok, fail
 
 # 定义一个函数，用于重新生成装配体。
 def ass_regen(m):
