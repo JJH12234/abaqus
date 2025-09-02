@@ -8,6 +8,7 @@ from kernelAccess import mdb, session
 # 从 kernelAccess 模块导入 mdb 和 session 对象，mdb 用于访问Abaqus模型数据库，session 用于访问当前会话。
 import os
 # 导入 os 模块，用于操作系统相关的操作，如路径处理。
+import re
 import json
 # 导入 json 模块，用于处理JSON数据，例如读取或写入JSON文件。
 import xlrd
@@ -2190,7 +2191,7 @@ class STPM_test1033DB(AFXDataDialog):
                 self.SizeFigDlg = AFXDialog(
                     _b(u'模型尺寸标注图'),
                     self.DISMISS, DIALOG_ACTIONS_SEPARATOR,
-                    x=0, y=0, w=950, h=630
+                    x=0, y=0, w=970, h=625
                 )
 
                 main = FXHorizontalFrame(
@@ -2205,65 +2206,84 @@ class STPM_test1033DB(AFXDataDialog):
 
                 thisDir = os.path.dirname(os.path.abspath(__file__))
                 imgDir  = os.path.join(thisDir, 'SizeFig')
+                png_items = []
+                for fn in os.listdir(imgDir):
+                    m = re.match(r'^(\d+)\.png$', fn, re.I)   # 只要数字命名的 png
+                    if m:
+                        png_items.append((int(m.group(1)), fn))
+                png_items.sort()  # 按数字从小到大
 
-                for i in range(1, 7):
-                    FXTabItem(tabBook, _b(str(i)), None, TAB_LEFT)
+                # 如果一个都没有，就给出提示页
+                if not png_items:
+                    FXTabItem(tabBook, _b('1'), None, TAB_LEFT)
+                    scroller = FXScrollWindow(tabBook, SCROLLERS_NORMAL | LAYOUT_FILL_X | LAYOUT_FILL_Y)
+                    page = FXHorizontalFrame(scroller, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y)
+                    FXLabel(page, _b(u'未找到图片'), None, LAYOUT_TOP | LAYOUT_CENTER_X, 0,0,0,0,0,0,0,0)
+                else:
+                    for idx, fn in png_items:
+                        FXTabItem(tabBook, _b(str(idx)), None, TAB_LEFT)
 
-                    scroller = FXScrollWindow(
-                        tabBook, SCROLLERS_NORMAL | LAYOUT_FILL_X | LAYOUT_FILL_Y
-                    )
-                    page = FXHorizontalFrame(
-                        scroller, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y
-                    )
+                        scroller = FXScrollWindow(
+                            tabBook, SCROLLERS_NORMAL | LAYOUT_FILL_X | LAYOUT_FILL_Y
+                        )
+                        page = FXHorizontalFrame(
+                            scroller, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y
+                        )
 
-                    imgpath = os.path.join(imgDir, '%d.png' % i)
+                        imgpath = os.path.join(imgDir, fn)
 
-                    if os.path.exists(imgpath):
-                        # 读入 PNG
-                        icon = afxCreatePNGIcon(imgpath)
+                        if os.path.exists(imgpath):
+                            # 读入 PNG
+                            icon = afxCreatePNGIcon(imgpath)
 
-                        # —— 等比缩小 —— #
-                        try:
-                            iw, ih = icon.getWidth(), icon.getHeight()
-                            if iw <= 0 or ih <= 0:
-                                raise ValueError('bad image size')
-
-                            scale = min(float(MAX_W)/float(iw),
-                                        float(MAX_H)/float(ih), 1.0)
-                            if scale < 1.0:
-                                new_w = max(1, int(iw * scale))
-                                new_h = max(1, int(ih * scale))
-                                icon.scale(new_w, new_h)
-
-                            # 提交像素到图形端
+                            # —— 等比缩小 —— #
                             try:
-                                icon.create()
+                                iw, ih = icon.getWidth(), icon.getHeight()
+                                if iw <= 0 or ih <= 0:
+                                    raise ValueError('bad image size')
+
+                                scale = min(float(MAX_W)/float(iw),
+                                            float(MAX_H)/float(ih), 1.0)
+                                if scale < 1.0:
+                                    new_w = max(1, int(iw * scale))
+                                    new_h = max(1, int(ih * scale))
+                                    icon.scale(new_w, new_h)
+
+                                # 提交像素到图形端
+                                try:
+                                    icon.create()
+                                except Exception:
+                                    pass
+                                try:
+                                    icon.render()
+                                except Exception:
+                                    pass
+
                             except Exception:
-                                pass
-                            try:
-                                icon.render()
-                            except Exception:
+                                # 缩放失败则原图显示
                                 pass
 
-                        except Exception:
-                            # 缩放失败则原图显示
-                            pass
+                            # 保存引用避免被回收
+                            self._size_icons.append(icon)
 
-                        # 保存引用避免被回收
-                        self._size_icons.append(icon)
+                            # 居中放置
+                            FXLabel(page, _b(''), icon,
+                                    LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
 
-                        # 居中放置
-                        FXLabel(page, _b(''), icon,
-                                LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
+                        else:
+                            # 路径里可能有中文，构造纯 ASCII 提示避免再次编码报错
+                            FXLabel(page, _b(u'未找到图片'), None,
+                                    LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
 
-                    else:
-                        # 路径里可能有中文，构造纯 ASCII 提示避免再次编码报错
-                        FXLabel(page, _b(u'未找到图片'), None,
-                                LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
+                    self.SizeFigDlg.create()
 
-                self.SizeFigDlg.create()
+            try:
+                self.SizeFigDlg.show()
+            except Exception:
+                # 如果被系统销毁了，就重建一次再显示
+                self.SizeFigDlg = None
+                return self.onClickSizeDiagram(sender, sel, ptr)
 
-            self.SizeFigDlg.show()
             return 1
 
         except Exception as e:
