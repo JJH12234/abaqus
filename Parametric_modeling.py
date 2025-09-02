@@ -12,6 +12,7 @@ from abaqus import *
 # 从abaqusConstants模块导入所有常量，例如YES, NO, CANCEL等。
 from abaqusConstants import *
 
+# 定义一个函数，用于获取当前Abaqus会话中正在显示的模型。
 def get_current_model():
     # 函数的文档字符串，简要说明其功能。
     """获取当前视口关联的模型"""
@@ -197,24 +198,31 @@ def paraModeling_features(feature,data):
 
 # 定义一个函数，用于处理和分离参数数据。
 def process_parameters(data):
-    # 初始化两个空列表，分别用于存储草图数据和特征数据。
-    # 分离sketch和features数据
     sketch_data = []
     features_data = []
-    # 根据数据的第四列（部件名称）进行排序。
+    mesh_data = []                      # ← 新增
     sorted_data = sorted(data, key=lambda x: x[3])
-    # 遍历排序后的每一行数据。
-    for row in sorted_data:  # 跳过标题行 (此注释可能不准确，实际是遍历所有行)
-        # 检查第三列（参数类型）是否以'sketch'开头。
-        if row[2].split('.')[0]=='sketch': #row[2]=='sketch.parameters'
-            # 如果是草图参数，则添加到sketch_data列表。
+
+    for row in sorted_data:
+        if not row or len(row) < 5:
+            continue
+        typ = str(row[2]).strip()       # 第三列
+
+        # 1) 草图参数
+        if typ.split('.')[0] == 'sketch':
             sketch_data.append(row)
-        # 否则，认为是特征参数。
-        else:
-            # 添加到features_data列表。
-            features_data.append(row)
-    # 返回分离后的草图数据和特征数据。
-    return sketch_data,features_data
+            continue
+
+        # 2) 网格种子：三种指令名
+        if typ in ('seedPart', 'seedEdgeBySize', 'seedEdgeByNumber'):
+            mesh_data.append(row)
+            continue
+
+        # 3) 其余当作“特征参数”
+        features_data.append(row)
+
+    return sketch_data, features_data, mesh_data
+
 
 # 定义一个函数，用于重新生成模型中的所有部件和装配体。
 def paraModeling_regen(m):
@@ -263,7 +271,6 @@ def apply_mesh_instructions(m, mesh_rows):
 
             # ---- 三种方法 ----
             if method == 'seedPart':
-                # 这里可按需先清网格（你宏里有 deleteMesh）
                 try:
                     p.deleteMesh()
                 except Exception:
@@ -339,6 +346,8 @@ def mesh_regen(m, delete_first=True):
     if fail:
         print("failed parts: %s" % ", ".join(fail))
     return ok, fail
+
+
 
 # 定义一个函数，用于重新生成装配体。
 def ass_regen(m):
