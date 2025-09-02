@@ -7,6 +7,7 @@ Created on Thu Mar 13 13:15:45 2025
 from abaqus import session
 from abaqus import VisError, OdpError
 from abaqusConstants import *
+import os
 from collections import OrderedDict,defaultdict
 import ast
 import json
@@ -17,6 +18,12 @@ import datetime
 import xyPlot
 from abaqusConstants import PNG
 import sys, re
+import matplotlib
+matplotlib.use('Agg')  # 在 CAE 里无 GUI 时用 Agg 后端保存 PNG  :contentReference[oaicite:2]{index=2}
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator  # 控制主刻度步长  :contentReference[oaicite:3]{index=3}
+from matplotlib import transforms
+from matplotlib.ticker import MultipleLocator, FuncFormatter
 IS_PY2 = (sys.version_info[0] == 2)
 if IS_PY2:
     unicode_type = unicode
@@ -163,324 +170,111 @@ def _unique_plot_name(base_prefix='Plot_CFI_', maxlen=38):
             return cand
         i += 1
 
-def _make_cfi_plot_finalonly(
+def _make_cfi_plot_finalonly_mpl(
         fatigue_list, creep_list, crit_ab,
         title_prefix, png_basename,
-        tick_inc=0.1,
-        # ↓ 新增：轴/标题字号参数（pt），以及字体族
-        font_face='Arial', pt_title=46, pt_label=36, pt_tick=32
+        tick_inc=0.1, font_face='Arial',
+        pt_title=32, pt_label=24, pt_tick=22
     ):
     if not fatigue_list or not creep_list:
         return
 
-    a, b   = float(crit_ab[0]), float(crit_ab[1])
+    a, b = float(crit_ab[0]), float(crit_ab[1])
     x_last = float(creep_list[-1])
     y_last = float(fatigue_list[-1])
 
+    # 判定（你现有的判定函数可直接复用）
     judge_txt = "Pass" if is_below_double_breakline(x_last, y_last, (a, b)) else "NotPass"
 
-    base         = re.sub(r'[^A-Za-z0-9_]+', '_', "{}_{}".format(title_prefix, png_basename))
-    xy_name_line = _repo_safe('XY_CFI_L_', base)
-    xy_name_pt   = _repo_safe('XY_CFI_P_', base)
-    xy_name_halo = _repo_safe('XY_CFI_P_HALO_', base)
-    plot_name    = _repo_safe('Plot_CFI_', base)
-    file_base    = _repo_safe('CFI_', base)
+    dpi = 200.0
+    fig_w = 3840.0/dpi
+    fig_h = 2160.0/dpi
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=int(dpi))
+    plt.rcParams['font.family'] = font_face
 
-    # 画布/分辨率
-    try:
-        session.graphicsOptions.setValues(backgroundColor='#FFFFFF')
-        session.printOptions.setValues(vpBackground=ON)
-        session.pngOptions.setValues(imageSize=(3840, 2160))
-    except:
-        pass
+    # 双折线：(0,1)→(a,b)→(1,0)
+    ax.plot([0.0, a, 1.0], [1.0, b, 0.0], '-', linewidth=2.0)
 
-    # 清理旧对象
-    for n in (xy_name_line, xy_name_pt, xy_name_halo):
-        try: del session.xyDataObjects[n]
-        except: pass
-    try: del session.xyPlots[plot_name]
-    except: pass
+    # 终点：外白环 + 红点（视觉上更醒目）
+    ax.scatter([x_last], [y_last], s=240, c='white', zorder=3, edgecolor='none')
+    ax.scatter([x_last], [y_last], s=160, c='red',   zorder=4, edgecolor='none')
 
-    # 数据
-    xy_line = session.XYData(name=xy_name_line, data=((0.0, 1.0), (a, b), (1.0, 0.0)))
-    xy_pt   = session.XYData(name=xy_name_pt,   data=((x_last, y_last),))
-    xy_halo = session.XYData(name=xy_name_halo, data=((x_last, y_last),))
-    
+    # 坐标轴：0~1，方形比例
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.set_aspect('equal', 'box')  # 让 0–1 的 x/y 显示为正方形  :contentReference[oaicite:7]{index=7}
 
-    # 建图
-    try:
-        xyp = session.XYPlot(name=_to_bytes(plot_name))
-    except Exception:
-        xyp = session.XYPlot(name=_to_bytes(_unique_plot_name()))
-    chart = xyp.charts.values()[0]
+    # 刻度与网格
+    ax.xaxis.set_major_locator(MultipleLocator(float(tick_inc)))  # :contentReference[oaicite:8]{index=8}
+    ax.yaxis.set_major_locator(MultipleLocator(float(tick_inc)))
+    ax.grid(True, alpha=0.25)
+    ax.tick_params(axis='both', labelsize=pt_tick)
 
-    # 曲线
-    c_line = session.Curve(xyData=xy_line)
-    c_pt_halo = session.Curve(xyData=xy_halo)
-    c_pt  = session.Curve(xyData=xy_pt)
+    ax.set_xlabel('Creep Damage',   fontsize=pt_label)
+    ax.set_ylabel('Fatigue Damage', fontsize=pt_label)
+    ax.set_title(u"CFI Check ({}) - {}".format(judge_txt, title_prefix), fontsize=pt_title)
 
-    # 关键：把曲线加入图表
-    chart.setValues(curvesToPlot=(c_line, c_pt_halo, c_pt))
-    _safe_axis_label(chart, xlabel='Creep Damage', ylabel='Fatigue Damage')
-
-    # —— 样式 —— #
-    # 折线（准则）
-    try:
-        c_line.setValues(displayTypes=(xyPlot.LINE,), useDefault=False) 
-        # 线更粗一点
-        c_line.lineStyle.setValues(color='Red', thickness=1.2)
-    except: pass
-
-    # 外白环（大一点，盖在红点下方）
-    try:
-        c_pt_halo.setValues(displayTypes=(xyPlot.SYMBOL,))
-        try:
-            c_pt_halo.symbolStyle.setValues(style=xyPlot.FILLED_CIRCLE, size=14, color='White')
-        except:
-            c_pt_halo.setValues(symbolStyle=session.SymbolStyle(style=xyPlot.FILLED_CIRCLE, size=14, color='White'))
-        # 不在图例里显示
-        try: c_pt_halo.setValues(showLegend=False)
-        except: pass
-    except: pass
-
-    # 红点（主点）
-    try:
-        c_pt.setValues(displayTypes=(xyPlot.SYMBOL,))
-        try:
-            c_pt.symbolStyle.setValues(style=xyPlot.FILLED_CIRCLE, size=12, color='Red')
-        except:
-            c_pt.setValues(symbolStyle=session.SymbolStyle(style=xyPlot.FILLED_CIRCLE, size=12, color='Red'))
-        try: c_pt.setValues(showLegend=False)
-        except: pass
-    except: pass
-
-    # 轴对象（新/旧两套命名兼容）
-    ax = getattr(chart, 'axes1', None)
-    ay = getattr(chart, 'axes2', None)
-    if ax and ay:
-        ax = ax[0]; ay = ay[0]
-    else:
-        ax = getattr(chart, 'xAxis1', None)
-        ay = getattr(chart, 'yAxis1', None)
-
-    # 轴标题 & 刻度
-    try:
-        chart.xAxis1.axisData.setValues(
-            title=_to_bytes('Fatigue damage'),
-            useSystemTitle=False, tickMode=INCREMENT, tickIncrement=float(tick_inc)
-        )
-        chart.yAxis1.axisData.setValues(
-            title=_to_bytes('Creep damage'),
-            useSystemTitle=False, tickMode=INCREMENT, tickIncrement=float(tick_inc)
-        )
-    except:
-        pass
-
-    # 字体放大（用 XLFD，跨版本更稳定）
-    def _xlfd_face(pt): return _xlfd(font=font_face, pt=pt, weight='medium')
-    try:
-        ax.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
-        ay.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
-        ax.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
-        ay.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
-        ax.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
-        ay.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
-    except:
-        # 旧路径兜底
-        try:
-            ax.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
-            ay.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
-            ax.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
-            ay.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
-            ax.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
-            ay.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
-        except:
-            pass
-
-    # 网格稍微加粗，易读
-    try:
-        chart.gridArea.setValues(show=True)
-        chart.gridArea.majorLineStyle.setValues(color='#CCCCCC', thickness=0.4)
-        chart.gridArea.minorLineStyle.setValues(color='#E6E6E6', thickness=0.2)
-    except:
-        pass
-
-    # 隐藏图例（全局 + 曲线级别已关闭）
-    try:
-        chart.legend.setValues(show=False)   # 这条才是视口里真正的图例
-    except:
-        pass
-    try: xyp.legend.setValues(show=False)
-    except: pass
-
-    # 标题
-    try:
-        xyp.title.setValues(text=_to_bytes(u"CFI Check ({}) - {}".format(judge_txt, title_prefix)))
-        xyp.title.style.setValues(font=_xlfd(font=font_face, pt=max(pt_title, 46), weight='bold'), color='Black')
-    except:
-        pass
-
-    # 复位视图，避免缩放导致“白图”
-    try: xyp.resetView()
-    except: pass
-
-    # 显示并导出
-    vp = session.viewports[session.currentViewportName]
-    vp.setValues(displayedObject=xyp)
-    session.printOptions.setValues(reduceColors=False)
-    session.printToFile(fileName=_to_bytes(file_base), format=PNG, canvasObjects=(vp,))
+    out = os.path.splitext(png_basename)[0] + '.png'
+    fig.savefig(out, dpi=int(dpi), facecolor='white', bbox_inches='tight')   # :contentReference[oaicite:9]{index=9}
+    plt.close(fig)
 
 
 
-def _make_xyplot_and_png(xy_pairs, title_text, ylabel_text, png_basename,
-                         x_tick_inc=1.0, 
-                         font_face='Arial',
-                         pt_title=42, pt_label=36, pt_tick=32, pt_legend=30):
-
+def _make_xyplot_and_png_mpl(
+        xy_pairs, title_text, ylabel_text, png_basename,
+        x_tick_inc=1.0, font_face='Arial',
+        pt_title=32, pt_label=24, pt_tick=22, pt_legend=30,
+        note_last=False, note_text=u'(with remaining holding time)'
+    ):
     if not xy_pairs:
         return
 
-    # 统一 float
-    xy_pairs = [(float(x), float(y)) for (x, y) in xy_pairs]
+    xs = np.array([float(x) for (x, _) in xy_pairs], dtype=float)
+    ys = np.array([float(y) for (_, y) in xy_pairs], dtype=float)
+    x_last = float(xs[-1])
 
-    # —— 安全命名 —— #
-    xy_name   = _safe_name(png_basename, prefix='XY_')
-    plot_name = _safe_name(png_basename, prefix='Plot_')
-    file_base = _safe_name(png_basename)
+    dpi   = 200.0
+    fig_w = 3840.0 / dpi
+    fig_h = 2160.0 / dpi
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=int(dpi))
+    plt.rcParams['font.family'] = font_face
 
-    # —— 背景/分辨率 —— #
-    try:
-        session.graphicsOptions.setValues(backgroundColor='#FFFFFF')
-        session.printOptions.setValues(vpBackground=ON)
-        session.pngOptions.setValues(imageSize=(3840, 2160))
-    except Exception:
-        pass
+    ax.plot(xs, ys, '-', linewidth=2.0)
+    ax.set_title(title_text, fontsize=pt_title)
+    ax.set_xlabel('Cycle', fontsize=pt_label)
+    ax.set_ylabel(ylabel_text, fontsize=pt_label)
 
-    # —— 清理同名对象 —— #
-    try: del session.xyDataObjects[xy_name]
-    except: pass
-    try: del session.xyPlots[plot_name]
-    except: pass
+    # 坐标范围与网格
+    ax.set_xlim(xs.min(), xs.max())
+    ax.grid(True, which='both', alpha=0.25)
+    ax.xaxis.set_major_locator(MultipleLocator(float(x_tick_inc)))
+    ax.tick_params(axis='both', labelsize=pt_tick)
 
-    # —— 建图 —— #
-    xy_obj = session.XYData(name=xy_name, data=tuple(xy_pairs))
-    xyp = session.XYPlot(name=plot_name)
-    chart = xyp.charts.values()[0]
-    c = session.Curve(xyData=xy_obj)
-    chart.setValues(curvesToPlot=[c])
-    try:
-        for cv in chart.curvesToPlot:
-            try:
-                cv.setValues(showLegend=False)
-            except:
-                pass
-    except:
-        pass
+    # 在最后一个刻度旁边拼接说明
+    if note_last:
+        tol = max(1e-6, 1e-6 * float(x_tick_inc))
 
-    # 2) 关掉当前图表的图例（两种句柄各关一次）
-    try:
-        cname = xyp.charts.keys()[0]  # 当前XYPlot里唯一的Chart名
-        session.charts[cname].legend.setValues(show=False)
-        xyp.charts[cname].legend.setValues(show=False)
-    except:
-        pass
+        # 确保最后一个周期一定是主刻度之一
+        ticks = list(ax.get_xticks())
+        if all(abs(t - x_last) > tol for t in ticks):
+            ticks.append(x_last)
+            ticks = sorted(ticks)
+            ax.set_xticks(ticks)
 
-    # 3) 关掉XYPlot级别的图例句柄
-    try:
-        xyp.legend.setValues(show=False)
-    except:
-        pass
+        def _fmt(x, pos=None):
+            is_int = abs(x - round(x)) < 1e-9
+            base = ("%d" % int(round(x))) if is_int else ("%g" % x)
+            if abs(x - x_last) <= tol:
+                return base + " " + note_text  # ← 与数字并排
+            return base
 
-    # 4) 新建图表的默认图例也关掉，防止被“恢复默认”再打开
-    try:
-        session.defaultChartOptions.legend.setValues(show=False)
-    except:
-        pass
+        ax.xaxis.set_major_formatter(FuncFormatter(_fmt))
+        # 右侧留一点空间以免长标签被裁掉
+        ax.margins(x=0.05)
 
-    # 曲线样式（可改）
-    try:
-        c.setValues(useDefault=False)
-        c.lineStyle.setValues(color='Red', thickness=1.2)
-    except Exception:
-        pass
-
-    # ===== 坐标轴对象（两种命名兼容） =====
-    ax = getattr(chart, 'axes1', None)
-    ay = getattr(chart, 'axes2', None)
-    if ax and ay:
-        ax = ax[0]; ay = ay[0]
-    else:
-        ax = getattr(chart, 'xAxis1', None)
-        ay = getattr(chart, 'yAxis1', None)
-
-    # X/Y 轴标题文字
-    _safe_axis_label(chart, xlabel=u'Cycle', ylabel=str(ylabel_text))
-
-    # X 轴刻度：固定增量
-    try:
-        ax.axisData.setValues(tickMode=INCREMENT, tickIncrement=float(x_tick_inc))
-    except Exception:
-        # 有的版本是直接在轴上
-        try:
-            ax.setValues(tickMode=INCREMENT, tickIncrement=float(x_tick_inc))
-        except Exception:
-            pass
-
-    # ===== 字体：统一 XLFD，确保真放大 =====
-    def _xlfd_face(pt):
-        return _xlfd(font=font_face, pt=pt, weight='medium')
-
-    # 先尝试 axisData.*Style（较新/常见）
-    try:
-        ax.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
-        ay.axisData.titleStyle.setValues(font=_xlfd_face(pt_title),  color='Black')
-        ax.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
-        ay.axisData.labelStyle.setValues(font=_xlfd_face(pt_label),  color='Black')
-        ax.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
-        ay.axisData.tickStyle.setValues( font=_xlfd_face(pt_tick),   color='Black')
-    except Exception:
-        # 兼容旧路径：axes1[0].titleStyle / labelStyle / tickStyle
-        try:
-            ax.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
-            ay.titleStyle.setValues( font=_xlfd_face(pt_title), color='Black')
-            ax.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
-            ay.labelStyle.setValues( font=_xlfd_face(pt_label), color='Black')
-            ax.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
-            ay.tickStyle.setValues(  font=_xlfd_face(pt_tick),  color='Black')
-        except Exception:
-            pass
-
-    # 总标题
-    try:
-        xyp.title.setValues(text=_to_bytes(title_text))
-        xyp.title.style.setValues(font=_xlfd(font=font_face, pt=max(pt_title, 28), weight='bold'),
-                                  color='Black')
-    except Exception:
-        pass
-
-    # 网格线（可读性）
-    try:
-        chart.gridArea.setValues(show=True)
-        chart.gridArea.majorLineStyle.setValues(color='#DDDDDD', thickness=0.4)
-        chart.gridArea.minorLineStyle.setValues(color='#EEEEEE', thickness=0.2)
-    except Exception:
-        pass
-
-    # 图例：字号 & 显示
-    try:
-        xyp.legend.setValues(show=False)
-        chart.legend.setValues(show=False)
-        # xyp.legend.textStyle.setValues( font=_xlfd(font=font_face, pt=pt_legend), color='Black')
-        # xyp.legend.titleStyle.setValues(font=_xlfd(font=font_face, pt=pt_legend), color='Black')
-        # xyp.legend.setValues(position=xyPlot.CENTER_RIGHT)
-    except Exception:
-        pass
-
-    # 展示 & 导出
-    vp = session.viewports[session.currentViewportName]
-    vp.setValues(displayedObject=xyp)
-    session.printOptions.setValues(reduceColors=False)
-    session.printToFile(fileName=file_base, format=PNG, canvasObjects=(vp,))
+    out = os.path.splitext(png_basename)[0] + '.png'
+    fig.savefig(out, dpi=int(dpi), facecolor='white', bbox_inches='tight')
+    plt.close(fig)
 
 
 
@@ -495,20 +289,23 @@ def _render_damage_plots(Damages, datetimenow, Step_configs):
 
             base_raw = u"{}__{}__{}".format(part, node, datetimenow).replace(':', "'").replace(' ', '_')
 
-            _make_xyplot_and_png(
+            _make_xyplot_and_png_mpl(
                 xy_pairs=fatigue_pairs,
                 title_text=u"Fatigue Damage - {} {}".format(part, node),
                 ylabel_text=u'Fatigue Damage',
                 png_basename='FatigueDamage_' + base_raw
             )
-            _make_xyplot_and_png(
-                xy_pairs=creep_pairs,
-                title_text=u"Creep Damage - {} {}".format(part, node),
-                ylabel_text='Creep Damage',
-                png_basename='CreepDamage_' + base_raw
-            )
+            _make_xyplot_and_png_mpl(
+    xy_pairs=creep_pairs,
+    title_text=u"Creep Damage - {} {}".format(part, node),
+    ylabel_text='Creep Damage',
+    png_basename='CreepDamage_' + base_raw,
+    x_tick_inc=1.0,
+    note_last=True,                       # ← 开启末刻度并排备注
+    note_text='(with remaining holding time)'
+)
             base_raw = u"{}__{}__{}".format(part, node, datetimenow).replace(':', "'").replace(' ', '_')
-            _make_cfi_plot_finalonly(
+            _make_cfi_plot_finalonly_mpl(
     fatigue_list=fatigue,
     creep_list=creep,
     crit_ab=tuple(Step_configs['damageJudge']),   # (a, b)

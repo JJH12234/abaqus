@@ -59,25 +59,15 @@ class SoftwareprogramDB(AFXDataDialog):
         AFXDataDialog.__init__(self, form, u'非弹性分析工具'.encode('GB18030'),
             self.OK|self.APPLY|self.CANCEL, DIALOG_ACTIONS_SEPARATOR)
             
-        # 将GUI事件ID与对应的处理函数进行映射。
-        # FXMAPFUNC函数用于将特定的GUI事件（SEL_COMMAND）与对话框实例的某个方法关联起来。
-        # 当ID_ANALYSE_TYPE_CHANGED事件发生时，调用SoftwareprogramDB类的onAnalyseTypeChanged方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_ANALYSE_TYPE_CHANGED, SoftwareprogramDB.onAnalyseTypeChanged)
-        # 当ID_CFICriterion_CHANGED事件发生时，调用onCFICriterionChanged方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CFICriterion_CHANGED, SoftwareprogramDB.onCFICriterionChanged)
-        # 当ID_PATH_SETTINGS_CHANGED事件发生时，调用onPathTypeChanged方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_PATH_SETTINGS_CHANGED, SoftwareprogramDB.onPathTypeChanged)
-        # 当ID_EXTRAPOLATE_TYPE_CHANGED事件发生时，调用onExtrapolateTypeChanged方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_EXTRAPOLATE_TYPE_CHANGED, SoftwareprogramDB.onExtrapolateTypeChanged)
-        # 当ID_TABLE_2_CHANGED事件发生时，调用updatetable2kw方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TABLE_2_CHANGED, SoftwareprogramDB.updatetable2kw)
-        # 当ID_TABLE1_CHANGED事件发生时，调用onAnyTableChanged方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TABLE1_CHANGED,
           SoftwareprogramDB.onAnyTableChanged)
-        # 当ID_TABLE2_CHANGED事件发生时，调用onAnyTableChanged方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TABLE2_CHANGED,
                 SoftwareprogramDB.onAnyTableChanged)
-        # 当ID_TINKER事件发生时，调用onTinker方法。
         FXMAPFUNC(self, SEL_COMMAND, self.ID_TINKER,
           SoftwareprogramDB.onTinker)
         # FXMAPFUNC(self, SEL_COMMAND, self.ID_OK, SoftwareprogramDB.onOk)
@@ -164,7 +154,6 @@ class SoftwareprogramDB(AFXDataDialog):
         self.GroupBox_9 = FXGroupBox(p=VFrame_2, text=u'防脆断设置'.encode('GB18030'), opts=FRAME_GROOVE|LAYOUT_FILL_X|LAYOUT_FILL_Y)
         self.ComboBox_8 = AFXComboBox(p=self.GroupBox_9, ncols=0, nvis=1, text=u'应力类型'.encode('GB18030'), tgt=form.BrittleStressKw, sel=0)
         self.ComboBox_8.setMaxVisible(10)
-        # 添加各种应力类型选项。
         self.ComboBox_8.appendItem(text='Mises')
         self.ComboBox_8.appendItem(text='Max. Principal')
         self.ComboBox_8.appendItem(text='Mid. Principal')
@@ -177,12 +166,9 @@ class SoftwareprogramDB(AFXDataDialog):
         self.ComboBox_8.appendItem(text='S12')
         self.ComboBox_8.appendItem(text='S13')
         self.ComboBox_8.appendItem(text='S23')
-        # 创建一个名为“外推设置”的组框（GroupBox_8），作为GroupBox_3的子控件。
         GroupBox_8 = FXGroupBox(p=GroupBox_3, text=u'外推设置'.encode('GB18030'), opts=FRAME_GROOVE|LAYOUT_FILL_X)
-        # 创建一个水平框架HFrame_5，作为GroupBox_8的子控件。
         HFrame_5 = FXHorizontalFrame(p=GroupBox_8, opts=LAYOUT_FILL_X, x=0, y=0, w=0, h=0,
             pl=0, pr=0, pt=0, pb=0)
-        # 在HFrame_5中创建一个下拉组合框（ComboBox_3），用于选择“外推类型”。
         self.ComboBox_3 = AFXComboBox(p=HFrame_5, ncols=0, nvis=1, text=u'外推类型'.encode('GB18030'), tgt=form.extrapolateTypeKw, sel=0)
         self.ComboBox_3.setMaxVisible(10)
         self.ComboBox_3.appendItem(text='Direct')
@@ -202,25 +188,15 @@ class SoftwareprogramDB(AFXDataDialog):
         # Note: Set the selector to indicate that this widget should not be
         #       colored differently from its parent when the 'Color layout managers'
         #       button is checked in the RSG Dialog Builder dialog.
-        # 设置选择器ID为99，这通常用于RSG（Abaqus GUI Builder）中，以控制布局管理器的着色行为。
         row_weld_pickHf.setSelector(99)
         label_weld = FXLabel(p=row_weld_pickHf, text=u'选取焊缝节点 (None)'.encode('GB18030'), ic=None, opts=LAYOUT_CENTER_Y|JUSTIFY_LEFT)
-        # 初始化一个 SoftwareprogramDBPickHandler 对象，用于处理焊缝节点的选取操作
-        # 初始化一个 SoftwareprogramDBPickHandler 对象，用于处理焊缝节点的选取操作
         self.pickHandler_points_weld = SoftwareprogramDBPickHandler(
-# 将当前表单对象传递给 pick handler
         form=form,
-# 指定与此选取器关联的关键字，用于存储选取结果
         keyword=form.picks1Kw,
-# 设置用户在视图中选取时看到的提示信息
         prompt=u'选取焊缝节点'.encode('GB18030'),
-# 指定可以选取的实体类型为节点 (NODES)
         entitiesToPick=NODES,
-# 允许选取多个实体 (MANY)
         numberToPick=MANY,
-# 关联的标签，用于显示选取状态
         label=label_weld,
-# 为此选取器指定一个唯一的键名，以便在插件中识别
         key_name='myPluginPickedNodesisweld'     # ← 唯一键名
     )
         # self.pickHandler_points_weld = SoftwareprogramDBPickHandler(form, form.picks1Kw, u'选取焊缝节点'.encode('GB18030'), NODES, MANY, label)
@@ -463,6 +439,17 @@ class SoftwareprogramDB(AFXDataDialog):
         return 1
 
     # ---------------------------------------------
+    def _commit_table_edits(self):
+        try:
+            # 把焦点切到对话框按钮，迫使当前单元格提交
+            ok_btn = self.getActionButton(self.ID_CLICKED_OK)
+            if ok_btn: ok_btn.setFocus()
+        except: pass
+        try:
+            # 进一步确保焦点离开表格（FOX/AFX 有 killFocus）
+            self.table_points.killFocus()
+            self.table_paths.killFocus()
+        except: pass
 
     # ====================  dialog  ====================
     # ------------------------------------------------------------
@@ -501,6 +488,7 @@ class SoftwareprogramDB(AFXDataDialog):
     def processTables(self):
         # —— 关键：先强制提交正在编辑的单元格 ——
         self._commit_table_edits()
+
         CLI_CODEC = 'GB18030'
         def cli_print(msg):
             try:
@@ -575,6 +563,7 @@ class SoftwareprogramDB(AFXDataDialog):
         except Exception as e:
             wr(u"表格处理错误:\n{}\n".format(unicode(e)).encode('GB18030'))
             AFXMessageDialog("Table-processing error  see Message Area.").showModal()
+
 
 
     def show(self):
