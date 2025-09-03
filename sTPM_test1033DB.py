@@ -82,8 +82,9 @@ class STPM_test1033DB(AFXDataDialog):
         ID_CLICKED_AMPPAIR,
         # 定义一个ID常量， 用于“AMPPAIR”操作的点击事件。
         ID_PARAMNAME_DBLCLICK,
-        ID_CLICKED_SIZEFIG
-    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 22)
+        ID_CLICKED_SIZEFIG,
+        ID_SIZEFIG_LIST
+    ] = range(AFXForm.ID_LAST+1, AFXForm.ID_LAST + 23)
     # 这些ID常量被赋值为从 AFXForm.ID_LAST+1 开始的连续整数，用于唯一标识GUI事件。
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, form):
@@ -327,6 +328,8 @@ class STPM_test1033DB(AFXDataDialog):
         FXLabel(p=btnRow, text='', opts=LAYOUT_FILL_X)
         sizeFigBtn = FXButton(p=btnRow,text=u'模型尺寸标注图'.encode('GB18030'),ic=None, tgt=self, sel=self.ID_CLICKED_SIZEFIG,opts=BUTTON_NORMAL|LAYOUT_RIGHT)
         FXMAPFUNC(self, SEL_COMMAND, self.ID_CLICKED_SIZEFIG, STPM_test1033DB.onClickSizeDiagram)
+        FXMAPFUNC(self, SEL_COMMAND, self.ID_SIZEFIG_LIST, STPM_test1033DB.onSizeFigList)
+
         # 创建一个 FXButton 控件，用于“更新模型尺寸”操作。
         # text: 按钮文本，使用GB18030编码显示中文。
         # ic=None: 没有图标。
@@ -2165,132 +2168,142 @@ class STPM_test1033DB(AFXDataDialog):
         def _b(s, fallback='GB18030'):
             if IS_PY2:
                 try:
-                    # 已经是 bytes
                     if isinstance(s, str):
                         return s
-                    # 是 unicode
-                    return s.encode('mbcs')  # Windows 本地编码
+                    return s.encode('mbcs')
                 except Exception:
                     try:
                         return s.encode('gbk', 'replace')
                     except Exception:
                         return s.encode(fallback, 'replace')
             else:
-                # Py3 不会走这里，但保留接口
                 return s if isinstance(s, str) else str(s)
 
         try:
-            # 显示窗口建议尺寸；图像按此上限等比缩小
+            # 图片缩放上限（不是窗口大小）
             MAX_W, MAX_H = 900, 620
 
-            # 保存图标引用以防被 GC
+            # 保存图标引用，避免被垃圾回收
             if not hasattr(self, '_size_icons'):
                 self._size_icons = []
 
-            if not hasattr(self, 'SizeFigDlg') or self.SizeFigDlg is None:
-                self.SizeFigDlg = AFXDialog(
-                    _b(u'模型尺寸标注图'),
-                    self.DISMISS, DIALOG_ACTIONS_SEPARATOR,
-                    x=0, y=0, w=970, h=625
-                )
+            # 每次点击都重新创建对话框，避免旧句柄失效
+            # 正确传入 owner（self）、标题字符串、按钮标识位和对话框选项
+            self.SizeFigDlg = AFXDialog(
+                self,                      # 父窗口
+                _b(u'模型尺寸标注图'),      # 标题
+                self.DISMISS,             # 按钮（这里使用 Dismiss）
+                DIALOG_ACTIONS_SEPARATOR, # 选项：显示按钮区分隔符
+                x=0, y=0, w=970, h=625    # 位置和尺寸
+            )
 
-                main = FXHorizontalFrame(
-                    self.SizeFigDlg,
-                    FRAME_RAISED | FRAME_SUNKEN | LAYOUT_FILL_X | LAYOUT_FILL_Y
-                )
+            # ===== 主体左右布局 =====
+            main = FXHorizontalFrame(
+                self.SizeFigDlg,
+                FRAME_RAISED | FRAME_SUNKEN | LAYOUT_FILL_X | LAYOUT_FILL_Y
+            )
 
-                tabBook = FXTabBook(
-                    main, None, 0,
-                    TABBOOK_LEFTTABS | LAYOUT_FILL_X | LAYOUT_FILL_Y
-                )
+            # 左侧：可滚动的“标签”
+            left_scroller = FXScrollWindow(
+                main, SCROLLERS_NORMAL | LAYOUT_FILL_Y | LAYOUT_FIX_WIDTH
+            )
+            left_scroller.setWidth(42)  # 固定窄宽度，用作竖排标签
 
-                thisDir = os.path.dirname(os.path.abspath(__file__))
-                imgDir  = os.path.join(thisDir, 'SizeFig')
-                png_items = []
-                for fn in os.listdir(imgDir):
-                    m = re.match(r'^(\d+)\.png$', fn, re.I)   # 只要数字命名的 png
-                    if m:
-                        png_items.append((int(m.group(1)), fn))
-                png_items.sort()  # 按数字从小到大
+            # 列表，用于选择图片
+            self._size_list = FXList(
+                left_scroller,
+                0,
+                tgt=self,
+                sel=self.ID_SIZEFIG_LIST,
+                opts=LIST_SINGLESELECT | LAYOUT_FILL_X | LAYOUT_FILL_Y
+            )
 
-                # 如果一个都没有，就给出提示页
-                if not png_items:
-                    FXTabItem(tabBook, _b('1'), None, TAB_LEFT)
-                    scroller = FXScrollWindow(tabBook, SCROLLERS_NORMAL | LAYOUT_FILL_X | LAYOUT_FILL_Y)
-                    page = FXHorizontalFrame(scroller, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y)
-                    FXLabel(page, _b(u'未找到图片'), None, LAYOUT_TOP | LAYOUT_CENTER_X, 0,0,0,0,0,0,0,0)
-                else:
-                    for idx, fn in png_items:
-                        FXTabItem(tabBook, _b(str(idx)), None, TAB_LEFT)
+            # 右侧：页面切换容器
+            self._size_switcher = FXSwitcher(
+                main, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y
+            )
 
-                        scroller = FXScrollWindow(
-                            tabBook, SCROLLERS_NORMAL | LAYOUT_FILL_X | LAYOUT_FILL_Y
-                        )
-                        page = FXHorizontalFrame(
-                            scroller, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y
-                        )
+            # ===== 收集图片 =====
+            thisDir = os.path.dirname(os.path.abspath(__file__))
+            imgDir  = os.path.join(thisDir, 'SizeFig')
 
-                        imgpath = os.path.join(imgDir, fn)
+            png_items = []
+            for fn in os.listdir(imgDir):
+                m = re.match(r'^(\d+)\.png$', fn, re.I)  # 只加载数字命名的 PNG
+                if m:
+                    png_items.append((int(m.group(1)), fn))
+            png_items.sort()
 
-                        if os.path.exists(imgpath):
-                            # 读入 PNG
-                            icon = afxCreatePNGIcon(imgpath)
+            if not png_items:
+                # 没有图片时显示空页面
+                self._size_list.appendItem(_b('1'))
+                page = FXHorizontalFrame(self._size_switcher, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y)
+                FXLabel(page, _b(u'未找到图片'), None, LAYOUT_TOP | LAYOUT_CENTER_X)
+            else:
+                for idx, fn in png_items:
+                    # 左侧列表项
+                    self._size_list.appendItem(_b(str(idx)))
 
-                            # —— 等比缩小 —— #
+                    # 右侧对应的页面
+                    page = FXHorizontalFrame(self._size_switcher, FRAME_NONE | LAYOUT_FILL_X | LAYOUT_FILL_Y)
+
+                    imgpath = os.path.join(imgDir, fn)
+                    if os.path.exists(imgpath):
+                        icon = afxCreatePNGIcon(imgpath)
+                        if icon is not None:
+                            # 等比缩小图片
                             try:
                                 iw, ih = icon.getWidth(), icon.getHeight()
-                                if iw <= 0 or ih <= 0:
-                                    raise ValueError('bad image size')
-
-                                scale = min(float(MAX_W)/float(iw),
-                                            float(MAX_H)/float(ih), 1.0)
-                                if scale < 1.0:
-                                    new_w = max(1, int(iw * scale))
-                                    new_h = max(1, int(ih * scale))
-                                    icon.scale(new_w, new_h)
-
-                                # 提交像素到图形端
+                                if iw > 0 and ih > 0:
+                                    scale = min(float(MAX_W)/float(iw), float(MAX_H)/float(ih), 1.0)
+                                    if scale < 1.0:
+                                        new_w = max(1, int(iw * scale))
+                                        new_h = max(1, int(ih * scale))
+                                        icon.scale(new_w, new_h)
                                 try:
                                     icon.create()
-                                except Exception:
+                                except:
                                     pass
                                 try:
                                     icon.render()
-                                except Exception:
+                                except:
                                     pass
-
-                            except Exception:
-                                # 缩放失败则原图显示
+                            except:
                                 pass
 
-                            # 保存引用避免被回收
                             self._size_icons.append(icon)
-
-                            # 居中放置
-                            FXLabel(page, _b(''), icon,
-                                    LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
-
+                            FXLabel(page, _b(''), icon, LAYOUT_TOP | LAYOUT_CENTER_X)
                         else:
-                            # 路径里可能有中文，构造纯 ASCII 提示避免再次编码报错
-                            FXLabel(page, _b(u'未找到图片'), None,
-                                    LAYOUT_TOP | LAYOUT_CENTER_X, 0, 0, 0, 0, 0, 0, 0, 0)
+                            FXLabel(page, _b(u'无法加载图片'), None, LAYOUT_TOP | LAYOUT_CENTER_X)
+                    else:
+                        FXLabel(page, _b(u'未找到图片'), None, LAYOUT_TOP | LAYOUT_CENTER_X)
 
-                    self.SizeFigDlg.create()
+                # 默认选中第一页
+                self._size_list.selectItem(0, True)
+                self._size_switcher.setCurrent(0)
 
-            try:
-                self.SizeFigDlg.show()
-            except Exception:
-                # 如果被系统销毁了，就重建一次再显示
-                self.SizeFigDlg = None
-                return self.onClickSizeDiagram(sender, sel, ptr)
-
+            self.SizeFigDlg.create()
+            self.SizeFigDlg.show()  # 也可以使用 showModal() 使对话框为模态
             return 1
 
         except Exception as e:
             try:
-                getAFXApp().getAFXMainWindow().writeToMessageArea(
-                    'Size diagram error: ' + str(e)
-                )
+                getAFXApp().getAFXMainWindow().writeToMessageArea('Size diagram error: ' + str(e))
+            except:
+                pass
+            return 0
+
+
+    # 让左侧列表控制右侧页面
+    def onSizeFigList(self, sender, sel, ptr):
+        try:
+            idx = sender.getCurrentItem()  # 一定是整数
+            if idx is not None and idx >= 0 and hasattr(self, '_size_switcher'):
+                self._size_switcher.setCurrent(int(idx))
+            return 1
+        except Exception as e:
+            try:
+                getAFXApp().getAFXMainWindow().writeToMessageArea('SizeFig list error: ' + str(e))
             except:
                 pass
             return 0
