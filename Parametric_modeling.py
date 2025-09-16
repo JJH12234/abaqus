@@ -1,27 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Parametric modeling for Abaqus/CAE with enhanced handling of dependent and
-independent instances, and cleaner logging (no mid-process assembly traceback).
+Parametric modeling for Abaqus/CAE with assembly- and part-level meshing,
+preserving original Dependent/Independent instance status.
 
-This script reads parameter definitions from an Excel sheet and applies them
-to sketches and features in the current Abaqus model. It also performs
-meshing instructions and handles the regeneration of parts and the root
-assembly. To avoid confusing "Assembly regen ... FeatureError" messages when
-the model is still in a transient state, this version does NOT call
-m.rootAssembly.regenerate() inside paraModeling_regen(). Only the final
-ass_regen(m) is used to report the end result.
+- Keeps original Dependent/Independent flags (no auto-conversion).
+- Mesh seeding supports:
+    * Part-level (seedPart / seedEdgeBySize / seedEdgeByNumber) for Dependent flow
+    * Assembly-level on instances when scope=='rootAssembly' or when the part has Independent instances
+- Regeneration covers all parts and also the rootAssembly.
 
 Python: Abaqus/CAE (2.7)
 """
 
 import xlrd
-from abaqus import *              # provided by Abaqus (mdb, session, etc.)
-from abaqusConstants import *     # constants like ON/OFF, FINER, etc.
+from abaqus import *              # mdb, session, etc.
+from abaqusConstants import *     # ON/OFF, FINER, etc.
 
-# -----------------------------
-# Verbosity control
-# -----------------------------
-VERBOSE = 0  # 0: minimal prints; 1: normal; 2: include Python tracebacks
+VERBOSE = 0  # 0 minimal; 1 normal; 2 include tracebacks
+
 
 def _print_traceback():
     if VERBOSE >= 2:
@@ -30,6 +26,7 @@ def _print_traceback():
             traceback.print_exc()
         except Exception:
             pass
+
 
 # -----------------------------
 # Helpers
@@ -58,38 +55,25 @@ def get_current_model():
     return mdb.models[modelname]
 
 
-def ensure_instances_dependent(m, part_name):
-    """Convert independent instances of part_name to Dependent and clear their meshes."""
-    a = m.rootAssembly
-    changed = []
-    for iname, inst in a.instances.items():
-        if getattr(inst, 'partName', None) != part_name:
-            continue
-        dep_flag = getattr(inst, 'dependent', None)
-        if dep_flag is None or dep_flag == OFF:
-            try:
-                a.deleteMesh(regions=(inst,))
-            except Exception:
-                pass
-            try:
-                a.makeDependent(instances=(inst,))
-            except Exception as e:
-                print("[Mesh] cannot make instance '%s' dependent: %s" % (iname, e))
-                continue
-            changed.append(iname)
-    if changed:
-        print("[Mesh] Instances made Dependent for part '%s': %s" %
-              (part_name, ", ".join(changed)))
-
-
 def clear_assembly_orphan_mesh(m):
     """Delete meshes from all instances in the root assembly (cleanup)."""
     a = m.rootAssembly
-    for iname, inst in a.instances.items():
+    for _, inst in a.instances.items():
         try:
             a.deleteMesh(regions=(inst,))
         except Exception:
             pass
+
+
+def _has_independent_instance(m, part_name):
+    """Return True if the given part has at least one Independent instance in the assembly."""
+    a = m.rootAssembly
+    for inst in a.instances.values():
+        if getattr(inst, 'partName', None) == part_name:
+            if getattr(inst, 'dependent', None) == OFF:  # OFF == Independent
+                return True
+    return False
+
 
 # -----------------------------
 # Core driver
@@ -99,23 +83,15 @@ def pre_paraModeling(ParaList):
     """Main driver for parametric modeling + meshing with clean logging."""
     m = get_current_model()
 
-    # Ensure all instances are Dependent BEFORE any geometry changes
-    for part_name in list(m.parts.keys()):
-        try:
-            ensure_instances_dependent(m, part_name)
-        except Exception as e:
-            print("[WARN] ensure_instances_dependent on part '%s' failed: %s" % (part_name, e))
-
-    # Assembly may still be transient here; keep this as a soft WARN without traceback
     try:
         m.rootAssembly.regenerate()
     except Exception as e:
-        print("[WARN] Assembly regen failed after makeDependent (non-fatal, will proceed): %s" % e)
+        print("[WARN] Assembly regen failed (non-fatal, will proceed): %s" % e)
 
-    # Split parameters: sketch / feature / mesh
+    # 拆分参数
     sketch_data, features_data, mesh_data = process_parameters(ParaList)
 
-    # ---- Apply sketch parameters grouped by (part, feature) ----
+    # ---- Sketch 参数按 (part, feature) 分组并应用 ----
     p_f_s = {}
     for row in sketch_data:
         if not row or len(row) < 5:
@@ -145,7 +121,6 @@ def pre_paraModeling(ParaList):
                     keys=u', '.join(part.features.keys())))
                 continue
             feat = part.features[hit]
-        # modify sketch params
         try:
             paraModeling_sketch(m, feat, rows)
         except Exception:
@@ -153,7 +128,7 @@ def pre_paraModeling(ParaList):
                   (partname_str, featname_str))
             _print_traceback()
 
-    # ---- Apply feature parameters ----
+    # ---- Feature 标量参数 ----
     for row in features_data:
         if not row or len(row) < 5:
             continue
@@ -185,15 +160,15 @@ def pre_paraModeling(ParaList):
             print("[WARN] Set feature value failed on %s.%s: %s" % (part_key, feat_key, e))
             _print_traceback()
 
-    # ---- Regenerate parts (NO assembly regen here) ----
-    paraModeling_regen(m)
+    # ---- Regen：零件 + 装配 ----
+    paraModeling_regen(m, regen_assembly=True)
 
-    # ---- Mesh workflow ----
+    # ---- 网格流程 ----
     clear_assembly_orphan_mesh(m)
-    apply_mesh_instructions(m, mesh_data)
-    mesh_regen(m)
+    asm_touched = apply_mesh_instructions(m, mesh_data)
+    mesh_regen(m, delete_first=True, assembly_instances=asm_touched)
 
-    # ---- Final assembly regen (single source of truth) ----
+    # ---- 最终装配 regen（单一可信结果）----
     ass_regen(m)
 
 
@@ -251,25 +226,27 @@ def process_parameters(data):
         typ = str(row[2]).strip()
         if typ.split('.')[0] == 'sketch':
             sketch_data.append(row)
-        elif typ in ('seedPart', 'seedEdgeBySize', 'seedEdgeByNumber'):
+        elif typ in ('seedPart', 'seedEdgeBySize', 'seedEdgeByNumber', 'seedPartInstance'):
             mesh_data.append(row)
         else:
             features_data.append(row)
     return sketch_data, features_data, mesh_data
 
+
 # -----------------------------
 # Regeneration / Meshing
 # -----------------------------
 
-def paraModeling_regen(m):
-    """Regenerate all parts; assembly regen is handled by caller later."""
+def paraModeling_regen(m, regen_assembly=True):
+    """Regenerate all parts and (optionally) the root assembly."""
+    # parts
     for partname, part in m.parts.items():
         try:
             part.regenerate()
         except Exception as e:
             print("%s regen fails! %s" % (partname, e))
             _print_traceback()
-        # Report suppressed features to help locate red X in Model Tree
+        # Report suppressed features to help locate red X
         try:
             suppressed_feats = [fname for fname, feat in part.features.items()
                                 if getattr(feat, 'suppressed', False)]
@@ -278,41 +255,162 @@ def paraModeling_regen(m):
                       (partname, ", ".join(suppressed_feats)))
         except Exception:
             pass
-    # IMPORTANT: do NOT call m.rootAssembly.regenerate() here.
+    # assembly
+    if regen_assembly:
+        try:
+            m.rootAssembly.regenerate()
+        except Exception as e:
+            print("[WARN] rootAssembly.regenerate() failed (non-fatal): %s" % e)
+            _print_traceback()
+
+
+def _resolve_assembly_edges(a, inst_name, set_name):
+    """Return an EdgeArray for assembly seeding.
+    Priority: assembly.sets -> instance.sets -> all edges of the instance."""
+    try:
+        if set_name and set_name in a.sets:
+            edges = a.sets[set_name].edges
+            if len(edges):
+                return edges
+    except Exception:
+        pass
+    try:
+        inst = a.instances[inst_name]
+        if (set_name and hasattr(inst, 'sets') and set_name in inst.sets
+                and len(inst.sets[set_name].edges)):
+            return inst.sets[set_name].edges
+        return inst.edges  # fallback: all edges on this instance
+    except Exception:
+        return None
 
 
 def apply_mesh_instructions(m, mesh_rows):
-    """Apply mesh seeds; ensure Dependent per part first."""
+    """Apply mesh seeds for Part-level and Assembly-level (rootAssembly) rows.
+
+    Returns:
+        set of instance names that were touched at assembly level (for later generateMesh).
+    """
     if not mesh_rows:
-        return
-    checked = set()
+        return set()
+
+    a = m.rootAssembly
+    assembly_instances_touched = set()
+
     for row in mesh_rows:
         try:
-            set_name  = str(row[0]).strip()
-            val_raw   = row[1]
-            method    = str(row[2]).strip()
-            part_name = str(row[3]).strip()
+            set_name  = str(row[0]).strip()     # 集合名（可空）
+            val_raw   = row[1]                  # 数值
+            method    = str(row[2]).strip()     # 方法
+            scope     = str(row[3]).strip()     # 'rootAssembly' 或 Part 名
+            extra     = str(row[4]).strip() if len(row) > 4 else ''  # 实例名 (装配级)
+
+            # —— 统一数值类型 —— #
+            if method == 'seedEdgeByNumber':
+                try:
+                    val_int = int(float(val_raw))
+                except Exception:
+                    print(u"[Mesh] Bad integer in column-2 for row: {}".format(row))
+                    continue
+            else:
+                try:
+                    val = float(val_raw)
+                except Exception:
+                    print(u"[Mesh] Bad float in column-2 for row: {}".format(row))
+                    continue
+
+            # ===== 装配级：对实例操作 =====
+            if scope.lower() == 'rootassembly':
+                inst_name = extra
+                if inst_name not in a.instances:
+                    print(u"[Mesh] Instance '{}' not found in rootAssembly.".format(inst_name))
+                    continue
+
+                # 删除该实例的旧网格（可选）
+                try:
+                    a.deleteMesh(regions=(a.instances[inst_name],))
+                except Exception:
+                    pass
+
+                # 1) 全局种子到实例
+                if method == 'seedPartInstance':
+                    try:
+                        a.seedPartInstance(regions=(a.instances[inst_name],),
+                                           size=val, deviationFactor=0.1, minSizeFactor=0.1)
+                    except Exception as e:
+                        print(u"[Mesh] seedPartInstance on '{}' failed: {}".format(inst_name, e))
+                        _print_traceback()
+                        continue
+                    assembly_instances_touched.add(inst_name)
+                    continue
+
+                # 2) 边种子（优先集合，否则全边）
+                picked = _resolve_assembly_edges(a, inst_name, set_name)
+                if picked is None or len(picked) == 0:
+                    print(u"[Mesh] No edges resolved for instance '{}' (set='{}'); skip.".format(
+                        inst_name, set_name))
+                    continue
+
+                try:
+                    if method == 'seedEdgeBySize':
+                        a.seedEdgeBySize(edges=picked, size=val,
+                                         deviationFactor=0.1, minSizeFactor=0.1,
+                                         constraint=FINER)
+                    elif method == 'seedEdgeByNumber':
+                        a.seedEdgeByNumber(edges=picked, number=val_int, constraint=FINER)
+                    else:
+                        print(u"[Mesh] Unknown assembly method '{}'; skip.".format(method))
+                        continue
+                except Exception as e:
+                    print(u"[Mesh] Assembly seeding failed on '{}': {}".format(inst_name, e))
+                    _print_traceback()
+                    continue
+
+                assembly_instances_touched.add(inst_name)
+                continue  # next row
+
+            # ===== 零件级：如果该 Part 存在 Independent 实例，则自动上浮到装配级 =====
+            part_name = scope
             if part_name not in m.parts:
                 print(u"[Mesh] Part '{}' not found; skip.".format(part_name))
                 continue
-            if part_name not in checked:
-                ensure_instances_dependent(m, part_name)
-                checked.add(part_name)
-            p = m.parts[part_name]
-            try:
-                if method == 'seedEdgeByNumber':
-                    val = int(float(val_raw))
-                else:
-                    val = float(val_raw)
-            except Exception:
-                print(u"[Mesh] Bad value in column-2 for row: {}".format(row))
+
+            if _has_independent_instance(m, part_name):
+                # 对所有 Independent 实例施加同样的种子
+                for nm, inst in a.instances.items():
+                    if inst.partName == part_name and getattr(inst, 'dependent', None) == OFF:
+                        try:
+                            a.deleteMesh(regions=(inst,))
+                        except Exception:
+                            pass
+                        if method == 'seedPart':
+                            a.seedPartInstance(regions=(inst,),
+                                               size=float(val_raw), deviationFactor=0.1, minSizeFactor=0.1)
+                        elif method in ('seedEdgeBySize', 'seedEdgeByNumber'):
+                            picked = _resolve_assembly_edges(a, nm, set_name)
+                            if picked is None or len(picked) == 0:
+                                print(u"[Mesh] No edges for instance '{}' (set='{}').".format(nm, set_name))
+                                continue
+                            if method == 'seedEdgeBySize':
+                                a.seedEdgeBySize(edges=picked, size=float(val_raw),
+                                                 deviationFactor=0.1, minSizeFactor=0.1, constraint=FINER)
+                            else:
+                                a.seedEdgeByNumber(edges=picked, number=int(float(val_raw)), constraint=FINER)
+                        else:
+                            print(u"[Mesh] Unknown method '{}' for Independent flow; skip.".format(method))
+                            continue
+                        assembly_instances_touched.add(nm)
+                # 不再在 Part 级处理该行
                 continue
+
+            # ===== 零件级（仅 Dependent 流程） =====
+            p = m.parts[part_name]
             if method == 'seedPart':
                 try:
                     p.deleteMesh()
                 except Exception:
                     pass
                 p.seedPart(size=val, deviationFactor=0.1, minSizeFactor=0.1)
+
             elif method == 'seedEdgeBySize':
                 if set_name in p.sets:
                     edges = p.sets[set_name].edges
@@ -324,31 +422,41 @@ def apply_mesh_instructions(m, mesh_rows):
                                      constraint=FINER)
                 else:
                     print(u"[Mesh] Set '{}' not found in part '{}'.".format(set_name, part_name))
+
             elif method == 'seedEdgeByNumber':
                 if set_name in p.sets:
                     edges = p.sets[set_name].edges
                     if len(edges) == 0:
                         print(u"[Mesh] Set '{}' in part '{}' has no edges.".format(set_name, part_name))
                         continue
-                    p.seedEdgeByNumber(edges=edges, number=val, constraint=FINER)
+                    p.seedEdgeByNumber(edges=edges, number=val_int, constraint=FINER)
                 else:
                     print(u"[Mesh] Set '{}' not found in part '{}'.".format(set_name, part_name))
             else:
                 print(u"[Mesh] Unknown method '{}'; skip.".format(method))
+
         except Exception as e:
             print(u"[Mesh] Fail on row {} -> {}".format(row, str(e)))
             _print_traceback()
 
+    return assembly_instances_touched
 
-def mesh_regen(m, delete_first=True):
-    """Delete & regenerate meshes on all parts (no assembly regen here)."""
+
+def mesh_regen(m, delete_first=True, assembly_instances=None):
+    """Regenerate meshes on parts and (if needed) on assembly instances."""
     try:
         parts = getattr(m, 'parts', {})
     except Exception as e:
         print("mesh_regen: cannot access model.parts: %s" % e)
         return [], []
+
+    a = m.rootAssembly
     ok, fail = [], []
+
+    # ① Part 级：仅对“没有 Independent 实例”的 Part 生成网格
     for partname, p in parts.items():
+        if _has_independent_instance(m, partname):
+            continue  # 交给装配级
         try:
             if delete_first:
                 try:
@@ -365,6 +473,26 @@ def mesh_regen(m, delete_first=True):
             print("%s regen fails! %s" % (partname, e))
             fail.append(partname)
             _print_traceback()
+
+    # ② 装配级：对所有 Independent 实例（以及被本轮种子的实例）生成网格
+    try:
+        inst_list = []
+        touched = set(assembly_instances or [])
+        for nm, inst in a.instances.items():
+            if getattr(inst, 'dependent', None) == OFF:  # Independent
+                inst_list.append(inst)
+                touched.add(nm)
+        if inst_list:
+            try:
+                a.generateMesh(regions=tuple(inst_list))
+                print("[ASM] generateMesh on instances: %s" % ", ".join(sorted(touched)))
+            except TypeError:
+                a.generateMesh()
+                print("[ASM] generateMesh on rootAssembly (fallback)")
+    except Exception as e:
+        print("[WARN] rootAssembly.generateMesh failed: %s" % e)
+        _print_traceback()
+
     print("mesh_regen summary: %d ok, %d fail" % (len(ok), len(fail)))
     if fail:
         print("failed parts: %s" % ", ".join(fail))
@@ -375,11 +503,10 @@ def ass_regen(m):
     """Final assembly regeneration only; if it fails, report now."""
     try:
         m.rootAssembly.regenerate()
-        # You can keep a success message here if you want:
-        # print("Assembly regen OK")
     except Exception as e:
         print("Assembly regen fails! %s" % e)
         _print_traceback()
+
 
 # -----------------------------
 # Excel I/O
